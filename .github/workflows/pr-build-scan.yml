@@ -87,7 +87,15 @@ jobs:
               done
           )"
 
-          dockerfiles_all="$(printf '%s\n' "$normalized_paths" | awk '!seen[$0]++')"
+          dockerfiles_all="$(
+            printf '%s\n' "$normalized_paths" \
+            | awk '!seen[$0]++' \
+            | while IFS= read -r f; do
+                if [ -f "$f" ]; then
+                  echo "$f"
+                fi
+              done
+          )"
           count="$(printf '%s\n' "$dockerfiles_all" | sed '/^$/d' | wc -l | tr -d ' ')"
 
           echo "Found $count Dockerfile(s) to build:"
