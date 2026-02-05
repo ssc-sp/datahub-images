@@ -1,4 +1,4 @@
-FROM docker.io/library/python:3.12-bookworm@sha256:564adc572923a83959dce17dc293d521b3329e930b3e5b8aa98bc50b3d25f8d1 AS python
+FROM docker.io/library/python:3.12-bookworm@sha256:efbb3e52ab8f17324f5b7e08152828a8fb2ea0c9c4e3818f7c3ea805ede0479b AS python
 FROM mcr.microsoft.com/azure-functions/python:4-python3.12@sha256:f758d1b027c9735a40b56427116d68dd0bb095539bf8d5a96068082e7d90e3f8 AS azure-function
 
 FROM python AS requirements
