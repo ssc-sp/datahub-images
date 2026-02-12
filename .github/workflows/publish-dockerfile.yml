@@ -93,7 +93,7 @@ jobs:
 
       - name: Setup JFrog CLI (OIDC)
         id: setup-jfrog-cli
-        uses: jfrog/setup-jfrog-cli@v4
+        uses: jfrog/setup-jfrog-cli@279b1f629f43dd5bc658d8361ac4802a7ef8d2d5 #v4.9.1
         env:
           JF_URL: https://artifacts-artefacts.devops.cloud-nuage.canada.ca
         with:
@@ -172,6 +172,6 @@ jobs:
 
       # Step 5: Upload SARIF file to GitHub Code Scanning
       - name: Upload SARIF to GitHub Code Scanning
-        uses: github/codeql-action/upload-sarif@ce28f5bb42b7a9f2c824e633a3f6ee835bab6858 # v3
+        uses: github/codeql-action/upload-sarif@b5ebac6f4c00c8ccddb7cdcd45fdb248329f808a # v3.32.2
         with:
           sarif_file: trivy-results/
