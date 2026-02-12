@@ -76,14 +76,21 @@ jobs:
           )"
           dockerfiles_list_raw+="$direct_dockerfiles"$'\n'
 
-          # Normalize paths and dedupe while preserving first-seen order
+          # Normalize paths, dedupe, AND CHECK EXISTENCE
           normalized_paths="$(
             printf '%s' "$dockerfiles_list_raw" \
             | sed '/^$/d; s#^\./##; s#/\+#/#g' \
             | while IFS= read -r p; do
                 [ -z "$p" ] && continue
-                # -m: normalize ../ and . even if path doesn't exist
-                realpath -m -- "$p"
+                
+                # Resolve path (handle ../ and .)
+                resolved_path=$(realpath -m -- "$p")
+                
+                # If the Dockerfile was deleted in this PR, 'realpath' resolves the string,
+                # but '-f' will return false, preventing it from being added to the build matrix.
+                if [ -f "$resolved_path" ]; then
+                  echo "$resolved_path"
+                fi
               done
           )"
 
@@ -154,7 +161,7 @@ jobs:
       - name: Setup GC Secure Artifacts and JFrog CLI
         if: ${{ steps.check-jfrog.outputs.uses_jfrog == 'true' }}
         id: setup-jfrog-cli
-        uses: jfrog/setup-jfrog-cli@v4
+        uses: jfrog/setup-jfrog-cli@279b1f629f43dd5bc658d8361ac4802a7ef8d2d5 #v4.9.1
         env:
           JF_URL: https://artifacts-artefacts.devops.cloud-nuage.canada.ca
         with:
@@ -162,7 +169,7 @@ jobs:
 
       - name: GC Secure Artifacts Docker login
         if: ${{ steps.check-jfrog.outputs.uses_jfrog == 'true' }}
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 #v3.7.0
         with:
           registry: https://artifacts-artefacts.devops.cloud-nuage.canada.ca
           username: ${{ steps.setup-jfrog-cli.outputs.oidc-user }}
