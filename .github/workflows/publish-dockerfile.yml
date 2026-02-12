@@ -88,7 +88,7 @@ jobs:
         # Set up Trivy, a tool for scanning Docker images for vulnerabilities
 
       - name: Set up Docker Build Environment
-        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
         # Set up Docker Buildx, which allows building multi-platform Docker images
 
       - name: Setup JFrog CLI (OIDC)
@@ -100,14 +100,14 @@ jobs:
           oidc-provider-name: github-oidc
 
       - name: Secure GC Artifacts login
-        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 #v3.7.0
         with:
           registry: https://artifacts-artefacts.devops.cloud-nuage.canada.ca
           username: ${{ steps.setup-jfrog-cli.outputs.oidc-user }}
           password: ${{ steps.setup-jfrog-cli.outputs.oidc-token }}
 
       - name: Log in to GitHub Container Registry
-        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 #v3.7.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
