@@ -22,7 +22,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 #v6.0.1
         with:
-          fetch-depth: 0 # Fetch full history to get commit information, useful for getting details of previous commits
+          fetch-depth: 1
+          persist-credentials: false
 
       - name: Get list of changed files
         id: get_changed_files
@@ -41,7 +42,7 @@ jobs:
         id: generate_dockerfile_list
         run: |
           # Get the JSON array of changed files from the previous step
-          changed_files_json='${{ steps.get_changed_files.outputs.changed_files }}'
+          changed_files_json='${STEPS_GET_CHANGED_FILES_OUTPUTS_CHANGED_FILES}'
 
           # Convert JSON array to a bash array
           mapfile -t changed_files_list < <(echo "$changed_files_json" | jq -r '.[]')
@@ -82,9 +83,11 @@ jobs:
 
           # Set the JSON string as an output for use in later steps
           echo "dockerfiles_to_build=$unique_dockerfiles_to_build_json" >> "$GITHUB_OUTPUT"
+        env:
+          STEPS_GET_CHANGED_FILES_OUTPUTS_CHANGED_FILES: ${{ steps.get_changed_files.outputs.changed_files }}
 
       - name: Set up Trivy
-        uses: aquasecurity/setup-trivy@ff1b8b060f23b650436d419b5e13f67f5d4c3087 # v0.2.2
+        uses: aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514 # v0.2.5
         # Set up Trivy, a tool for scanning Docker images for vulnerabilities
 
       - name: Set up Docker Build Environment
@@ -116,9 +119,10 @@ jobs:
       - name: Build and Scan Docker Images
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          STEPS_GENERATE_DOCKERFILE_LIST_OUTPUTS_DOCKERFILES_TO_BUILD: ${{ steps.generate_dockerfile_list.outputs.dockerfiles_to_build }}
         run: |
           # Get the JSON array of Dockerfiles to build from the previous step
-          dockerfiles_json='${{ steps.generate_dockerfile_list.outputs.dockerfiles_to_build }}'
+          dockerfiles_json='${STEPS_GENERATE_DOCKERFILE_LIST_OUTPUTS_DOCKERFILES_TO_BUILD}'
           # Convert JSON array to a bash array
           mapfile -t dockerfiles_list < <(echo "$dockerfiles_json" | jq -r '.[]')
 
@@ -129,7 +133,7 @@ jobs:
 
           REVISION="${GITHUB_SHA}"
           CREATED="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          REF_NAME="${{ github.ref_name }}"
+          REF_NAME="${GITHUB_REF_NAME}"
           SOURCE_URL="https://github.com/${{ github.repository }}"
 
           # Iterate through each Dockerfile path
@@ -172,6 +176,6 @@ jobs:
 
       # Step 5: Upload SARIF file to GitHub Code Scanning
       - name: Upload SARIF to GitHub Code Scanning
-        uses: github/codeql-action/upload-sarif@b5ebac6f4c00c8ccddb7cdcd45fdb248329f808a # v3.32.2
+        uses: github/codeql-action/upload-sarif@9e907b5e64f6b83e7804b09294d44122997950d6 # v4.32.3
         with:
           sarif_file: trivy-results/

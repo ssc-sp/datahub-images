@@ -1,5 +1,5 @@
 FROM ubuntu:24.04@sha256:6015f66923d7afbc53558d7ccffd325d43b4e249f41a6e93eef074c9505d2233
-LABEL org.opencontainers.image.description="Container Job to rorate Storage Account SAS tokens"
+LABEL org.opencontainers.image.description="Container Job to rotate Storage Account SAS tokens"
 LABEL org.opencontainers.image.source="https://github.com/fsdh-pfds/datahub-images"
 LABEL org.opencontainers.image.url="https://github.com/fsdh-pfds/datahub-images/blob/main/managed-containers/proj-sas-worker/README.md"
 
@@ -16,7 +16,7 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates \
  && rm -rf /var/lib/apt/lists/* 
 
-# apt-get shapshot id
+# apt-get snapshot id
 ARG SNAPSHOT_ID=20250912T000000Z
 RUN echo "APT::Snapshot \"${SNAPSHOT_ID}\";" \
      > /etc/apt/apt.conf.d/50snapshot

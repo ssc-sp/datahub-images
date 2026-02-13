@@ -22,6 +22,7 @@ jobs:
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 #v6.0.1
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Generated Changed Files JSON
         id: changed
@@ -50,7 +51,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          changed_files_json='${{ steps.changed.outputs.changed_files }}'
+          changed_files_json="${STEPS_CHANGED_OUTPUTS_CHANGED_FILES}"
 
           # Derive unique component roots: managed-containers/<component>
           components="$(
@@ -129,6 +130,8 @@ jobs:
             echo '__JSON__'
           } >> "$GITHUB_OUTPUT"
           echo "count=$count" >> "$GITHUB_OUTPUT"
+        env:
+          STEPS_CHANGED_OUTPUTS_CHANGED_FILES: ${{ steps.changed.outputs.changed_files }}
 
   build-and-scan:
     permissions:
@@ -143,12 +146,15 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 #v6.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
 
       - name: Check for GC Secure Artifacts usage
         id: check-jfrog
         run: |
           set -euo pipefail
-          dockerfile="${{ matrix.dockerfile }}"
+          dockerfile="${MATRIX_DOCKERFILE}"
 
           if grep -Eq '^[[:space:]]*FROM[[:space:]]+artifacts-artefacts\.devops\.cloud-nuage\.canada\.ca/' "$dockerfile"; then
             echo "Detected JFrog base image reference"
@@ -157,6 +163,8 @@ jobs:
             echo "No JFrog base image found"
             echo "uses_jfrog=false" >> "$GITHUB_OUTPUT"
           fi
+        env:
+          MATRIX_DOCKERFILE: ${{ matrix.dockerfile }}
 
       - name: Setup GC Secure Artifacts and JFrog CLI
         if: ${{ steps.check-jfrog.outputs.uses_jfrog == 'true' }}
@@ -178,7 +186,7 @@ jobs:
       - name: Validate top-level folder (no spaces under managed-containers/)
         run: |
           set -euo pipefail
-          file="${{ matrix.dockerfile }}"
+          file="${MATRIX_DOCKERFILE}"
 
           # Reduce to the path segment starting at managed-containers/
           rel_path="$(printf '%s\n' "$file" | sed -E 's#^.*(managed-containers/.*)$#\1#')"
@@ -189,29 +197,37 @@ jobs:
             echo "::error title=Invalid component folder name::The top-level folder under 'managed-containers' contains whitespace: '$component'. Rename it (use '-' or '_'). Spaces are allowed in subfolders. Offending path: $rel_path"
             exit 1
           fi
+        env:
+          MATRIX_DOCKERFILE: ${{ matrix.dockerfile }}
 
       - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
 
       - name: Setup Trivy
-        uses: aquasecurity/setup-trivy@ff1b8b060f23b650436d419b5e13f67f5d4c3087 # v0.2.2
+        uses: aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514 # v0.2.5
 
       - name: Build image
         run: |
           set -euo pipefail
-          echo "Building ${{ matrix.image }} from ${{ matrix.dockerfile }} (context: ${{ matrix.context }})"
+          echo "Building ${MATRIX_IMAGE} from ${MATRIX_DOCKERFILE} (context: ${MATRIX_CONTEXT})"
           docker buildx build \
             --load \
             --no-cache \
-            -t "${{ matrix.image }}" \
-            -f "${{ matrix.dockerfile }}" \
-            "${{ matrix.context }}"
+            -t "${MATRIX_IMAGE}" \
+            -f "${MATRIX_DOCKERFILE}" \
+            "${MATRIX_CONTEXT}"
+        env:
+          MATRIX_IMAGE: ${{ matrix.image }}
+          MATRIX_DOCKERFILE: ${{ matrix.dockerfile }}
+          MATRIX_CONTEXT: ${{ matrix.context }}
 
       - name: Scan (Trivy, CRITICAL only)
         run: |
           set -euo pipefail
-          img="${{ matrix.image }}"
+          img="${MATRIX_IMAGE}"
           echo "Saving and scanning image: $img"
           docker save "$img" -o image.tar
           trivy image --quiet --format table --exit-code 1 --severity CRITICAL --input image.tar
           rm -f image.tar
+        env:
+          MATRIX_IMAGE: ${{ matrix.image }}
