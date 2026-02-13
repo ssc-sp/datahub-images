@@ -22,7 +22,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 #v6.0.1
         with:
-          fetch-depth: 0 # Fetch full history to get commit information, useful for getting details of previous commits
+          fetch-depth: 1
+          persist-credentials: false
 
       - name: Get list of changed files
         id: get_changed_files
