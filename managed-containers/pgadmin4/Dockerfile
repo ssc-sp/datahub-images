@@ -1,9 +1,9 @@
 # Pinned to specific image
-FROM dpage/pgadmin4
+FROM dpage/pgadmin4:latest@sha256:10137f33be7ed61e47f56004493710cb5b80ba7fb0ca01758855e242f1f284a7
 
 LABEL org.opencontainers.image.description="pgAdmin4 for Postgres Database Web UI"
-LABEL org.opencontainers.image.source="https://github.com/fsdh-pfds/datahub-images"
-LABEL org.opencontainers.image.url="https://github.com/fsdh-pfds/datahub-images/blob/main/managed-containers/pgadmin4/README.md"
+LABEL org.opencontainers.image.source="https://github.com/ssc-sp/datahub-images"
+LABEL org.opencontainers.image.url="https://github.com/ssc-sp/datahub-images/blob/main/managed-containers/pgadmin4/README.md"
 
 # Target platform check docker buildx build --platform linux/amd64
 ARG TARGETPLATFORM
@@ -32,8 +32,10 @@ RUN apk update \
 
 # Copy your app
 WORKDIR /pgadmin4
+
 # RUN chown pgadmin4 config.py
 RUN sed -i "/AUTHENTICATION_SOURCES/cAUTHENTICATION_SOURCES = ['webserver']" config.py
 RUN sed -i "/MASTER_PASSWORD_REQUIRED =/cMASTER_PASSWORD_REQUIRED = False" config.py
 
 
+USER pgadmin
