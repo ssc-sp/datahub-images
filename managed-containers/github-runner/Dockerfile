@@ -52,7 +52,7 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates \
  && rm -rf /var/lib/apt/lists/* 
 
-# apt-get shapshot id
+# apt-get snapshot id
 RUN echo "APT::Snapshot \"${SNAPSHOT_ID}\";" \
      > /etc/apt/apt.conf.d/50snapshot
 
