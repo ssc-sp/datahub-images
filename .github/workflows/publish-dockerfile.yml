@@ -42,7 +42,7 @@ jobs:
         id: generate_dockerfile_list
         run: |
           # Get the JSON array of changed files from the previous step
-          changed_files_json='${STEPS_GET_CHANGED_FILES_OUTPUTS_CHANGED_FILES}'
+          changed_files_json="${STEPS_GET_CHANGED_FILES_OUTPUTS_CHANGED_FILES}"
 
           # Convert JSON array to a bash array
           mapfile -t changed_files_list < <(echo "$changed_files_json" | jq -r '.[]')
@@ -122,7 +122,7 @@ jobs:
           STEPS_GENERATE_DOCKERFILE_LIST_OUTPUTS_DOCKERFILES_TO_BUILD: ${{ steps.generate_dockerfile_list.outputs.dockerfiles_to_build }}
         run: |
           # Get the JSON array of Dockerfiles to build from the previous step
-          dockerfiles_json='${STEPS_GENERATE_DOCKERFILE_LIST_OUTPUTS_DOCKERFILES_TO_BUILD}'
+          dockerfiles_json="${STEPS_GENERATE_DOCKERFILE_LIST_OUTPUTS_DOCKERFILES_TO_BUILD}"
           # Convert JSON array to a bash array
           mapfile -t dockerfiles_list < <(echo "$dockerfiles_json" | jq -r '.[]')
 
