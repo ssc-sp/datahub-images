@@ -85,7 +85,7 @@ jobs:
           echo "dockerfiles_to_build=$unique_dockerfiles_to_build_json" >> "$GITHUB_OUTPUT"
 
       - name: Set up Trivy
-        uses: aquasecurity/setup-trivy@ff1b8b060f23b650436d419b5e13f67f5d4c3087 # v0.2.2
+        uses: aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514 # v0.2.5
         # Set up Trivy, a tool for scanning Docker images for vulnerabilities
 
       - name: Set up Docker Build Environment
