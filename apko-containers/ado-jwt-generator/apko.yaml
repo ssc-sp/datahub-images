@@ -1,7 +1,7 @@
 contents:
   repositories:
     - https://dl-cdn.alpinelinux.org/alpine/edge/main
-    - '@local ./packages'
+    - "@local ./packages"
   packages:
     - busybox
     - ca-certificates-bundle
