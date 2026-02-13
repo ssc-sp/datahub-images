@@ -1,4 +1,4 @@
-# Pinned to specific image
+# Pinned to specific pgadmin image
 FROM dpage/pgadmin4:latest@sha256:10137f33be7ed61e47f56004493710cb5b80ba7fb0ca01758855e242f1f284a7
 
 LABEL org.opencontainers.image.description="pgAdmin4 for Postgres Database Web UI"
