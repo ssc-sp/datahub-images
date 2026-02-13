@@ -51,7 +51,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          changed_files_json='${STEPS_CHANGED_OUTPUTS_CHANGED_FILES}'
+          changed_files_json="${STEPS_CHANGED_OUTPUTS_CHANGED_FILES}"
 
           # Derive unique component roots: managed-containers/<component>
           components="$(
