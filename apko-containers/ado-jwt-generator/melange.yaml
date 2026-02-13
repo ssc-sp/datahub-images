@@ -1,0 +1,24 @@
+package:
+  name: ado-jwt-generator
+  version: 1
+  epoch: 0
+  description: "Azure DevOps JWT generator using Managed Identity"
+
+  dependencies:
+    runtime:
+      - curl
+      - jq
+      - openssl
+      - ca-certificates-bundle
+
+environment:
+  contents:
+    repositories:
+      - https://dl-cdn.alpinelinux.org/alpine/edge/main
+    packages:
+      - alpine-baselayout-data
+      - busybox
+
+pipeline:
+  - runs: |
+      install -Dm755 entrypoint.sh "${{targets.destdir}}/usr/bin/ado-jwt-generator"
