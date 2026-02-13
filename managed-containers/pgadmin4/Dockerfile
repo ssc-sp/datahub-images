@@ -36,6 +36,6 @@ WORKDIR /pgadmin4
 # RUN chown pgadmin4 config.py
 RUN sed -i "/AUTHENTICATION_SOURCES/cAUTHENTICATION_SOURCES = ['webserver']" config.py
 RUN sed -i "/MASTER_PASSWORD_REQUIRED =/cMASTER_PASSWORD_REQUIRED = False" config.py
-
+RUN sed -i "/WEBSERVER_REMOTE_USER =/cWEBSERVER_REMOTE_USER = 'dh-user'" config.py
 
 USER pgadmin
