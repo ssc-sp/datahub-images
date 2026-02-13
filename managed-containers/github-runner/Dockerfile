@@ -1,4 +1,4 @@
-FROM curlimages/curl:latest@sha256:4026b29997dc7c823b51c164b71e2b51e0fd95cce4601f78202c513d97da2922 AS downloader
+FROM curlimages/curl:latest@sha256:d94d07ba9e7d6de898b6d96c1a072f6f8266c687af78a74f380087a0addf5d17 AS downloader
 
 ARG RUNNER_VERSION=2.327.1
 ARG RUNNER_CONTAINER_HOOKS_VERSION=0.7.0
