@@ -33,7 +33,7 @@ RUN apk update \
 # Copy your app
 WORKDIR /pgadmin4
 # RUN chown pgadmin4 config.py
-RUN sed -i "/AUTHENTICATION_SOURCES/cAUTHENTICATION_SOURCES = ['websrever']" config.py
+RUN sed -i "/AUTHENTICATION_SOURCES/cAUTHENTICATION_SOURCES = ['webserver']" config.py
 RUN sed -i "/MASTER_PASSWORD_REQUIRED =/cMASTER_PASSWORD_REQUIRED = False" config.py
 
 
