@@ -18,7 +18,7 @@ ENV FSDH_ENVNAME=dev \
     FSDH_DB_NAME= \
     FSDH_DB_USER= \
     FSDH_DB_PASSWORD= \  
-    PGADMIN_SERVER_JSON_FILE=/tmp/servers.json \
+    PGADMIN_SERVER_JSON_FILE=/fsdh/servers.json \
     DEBIAN_FRONTEND=noninteractive
 
 # Enable Snapshotting
@@ -30,6 +30,7 @@ USER root
 RUN apk update \
     && xargs -a /tmp/base_packages.list apk add
 
+RUN mkdir /fsdh && chown pgadmin /fsdh
 # Copy your app
 WORKDIR /pgadmin4
 
