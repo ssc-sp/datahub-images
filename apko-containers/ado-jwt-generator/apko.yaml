@@ -1,7 +1,10 @@
 contents:
   repositories:
-    - https://dl-cdn.alpinelinux.org/alpine/edge/main
+    - https://packages.wolfi.dev/os
     - "@local ./packages"
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+
   packages:
     - busybox
     - ca-certificates-bundle
