@@ -22,3 +22,4 @@ accounts:
 
 entrypoint:
   command: /usr/bin/ado-jwt-generator
+  
