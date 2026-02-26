@@ -1,0 +1,24 @@
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+    - "@local ./packages"
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+
+  packages:
+    - busybox
+    - ca-certificates-bundle
+    - ado-jwt-generator@local
+
+accounts:
+  groups:
+    - groupname: jwt
+      gid: 10001
+  users:
+    - username: jwt
+      uid: 10001
+      gid: 10001
+  run-as: 10001
+
+entrypoint:
+  command: /usr/bin/ado-jwt-generator

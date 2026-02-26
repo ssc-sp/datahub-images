@@ -1,0 +1,160 @@
+---
+name: Publish Containers (Apko/Melange)
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "apko-containers/**"
+
+permissions: read-all
+
+jobs:
+  build-publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+      security-events: write
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 #v6.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Setup Melange
+        uses: chainguard-dev/actions/setup-melange@main
+
+      - name: Setup Apko
+        uses: chainguard-dev/actions/setup-apko@main
+
+      - name: Get list of changed files
+        id: get_changed_files
+        run: |
+          changed_files=$(git diff --name-only "${{ github.event.before }}" "${{ github.sha }}")
+          changed_files_json=$(echo "$changed_files" | jq -R -s -c 'split("\n")[:-1] | map(select(length > 0))')
+          echo "Changed files: $changed_files"
+          echo "changed_files=$changed_files_json" >> "$GITHUB_OUTPUT"
+
+      - name: Generate list of apko components to build
+        id: generate_apko_list
+        run: |
+          changed_files_json='${{ steps.get_changed_files.outputs.changed_files }}'
+          mapfile -t changed_files_list < <(echo "$changed_files_json" | jq -r '.[]')
+
+          apko_files_to_build=()
+          for file in "${changed_files_list[@]}"; do
+            # If any file inside a component folder changes, rebuild its apko.yaml
+            if [[ $file == managed-containers/*/* ]]; then
+              top_level_dir=$(echo "$file" | cut -d'/' -f1-2)
+              if [[ -f "$top_level_dir/apko.yaml" ]]; then
+                apko_files_to_build+=("$top_level_dir/apko.yaml")
+              fi
+            fi
+          done
+
+          # Remove duplicates
+          mapfile -t unique_apko_to_build < <(printf "%s\n" "${apko_files_to_build[@]}" | sort -u)
+
+          if[ ${#unique_apko_to_build[@]} -eq 0 ]; then
+            echo "No apko.yaml configs found to build. Exiting..."
+            exit 0
+          fi
+
+          echo "Unique configs to build: ${unique_apko_to_build[*]}"
+          unique_apko_json=$(printf '%s\n' "${unique_apko_to_build[@]}" | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          echo "apko_to_build=$unique_apko_json" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Trivy
+        uses: aquasecurity/setup-trivy@ff1b8b060f23b650436d419b5e13f67f5d4c3087 # v0.2.2
+
+      - name: Setup JFrog CLI (OIDC)
+        id: setup-jfrog-cli
+        uses: jfrog/setup-jfrog-cli@279b1f629f43dd5bc658d8361ac4802a7ef8d2d5 #v4.9.1
+        env:
+          JF_URL: https://artifacts-artefacts.devops.cloud-nuage.canada.ca
+        with:
+          oidc-provider-name: github-oidc
+
+      - name: Secure GC Artifacts login
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 #v3.7.0
+        with:
+          registry: https://artifacts-artefacts.devops.cloud-nuage.canada.ca
+          username: ${{ steps.setup-jfrog-cli.outputs.oidc-user }}
+          password: ${{ steps.setup-jfrog-cli.outputs.oidc-token }}
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 #v3.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and Scan Apko Images
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MELANGE_RSA: ${{ secrets.MELANGE_RSA }}
+        run: |
+          apko_json='${{ steps.generate_apko_list.outputs.apko_to_build }}'
+          mapfile -t apko_list < <(echo "$apko_json" | jq -r '.[]')
+
+          mkdir -p trivy-results
+
+          # 1. Ensure bit-for-bit reproducibility using the Git commit timestamp
+          export SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)
+          CREATED="$(git show -s --format=%cI ${GITHUB_SHA})"
+          
+          REVISION="${GITHUB_SHA}"
+          REF_NAME="${{ github.ref_name }}"
+          SOURCE_URL="https://github.com/${{ github.repository }}"
+
+          # 2. Prepare the private signing key
+          echo "$MELANGE_RSA" > /tmp/melange.rsa
+          chmod 600 /tmp/melange.rsa
+
+          for apko_file in "${apko_list[@]}"; do
+            component_dir="$(dirname "$apko_file")"
+            package_name="$(basename "$component_dir" | tr '[:upper:]' '[:lower:]')"
+            repo_path="ghcr.io/${{ github.repository_owner }}/$package_name:latest"
+
+            echo "Building component: $package_name"
+            
+            # Change into the directory so apko/melange paths resolve correctly
+            cd "$GITHUB_WORKSPACE/$component_dir"
+
+            # 3. Build local packages if melange.yaml exists
+            if[ -f "melange.yaml" ]; then
+              echo "Found melange.yaml, building local package..."
+              melange build melange.yaml \
+                --arch x86_64 \
+                --signing-key /tmp/melange.rsa \
+                --repository-append ./packages
+            fi
+
+            # 4. Build and push the image directly to the registry using apko
+            # Note: apko publish handles building and pushing in one step
+            echo "Publishing Apko image to $repo_path..."
+            apko publish apko.yaml "$repo_path" \
+              --lockfile apko.lock.json \
+              --arch x86_64 \
+              --keyring-append melange.rsa.pub \
+              --annotations org.opencontainers.image.revision="${REVISION}" \
+              --annotations org.opencontainers.image.created="${CREATED}" \
+              --annotations org.opencontainers.image.ref.name="${REF_NAME}" \
+              --annotations org.opencontainers.image.source="${SOURCE_URL}"
+
+            # 5. Scan the remote image with Trivy
+            echo "Scanning $repo_path..."
+            trivy image --severity CRITICAL,HIGH --format sarif --output "$GITHUB_WORKSPACE/trivy-results/${package_name}.sarif" "$repo_path"
+            
+            # Go back to workspace root for the next iteration
+            cd "$GITHUB_WORKSPACE"
+          done
+
+      - name: Upload SARIF to GitHub Code Scanning
+        uses: github/codeql-action/upload-sarif@9e907b5e64f6b83e7804b09294d44122997950d6 # v4.32.3
+        with:
+          sarif_file: trivy-results/
