@@ -167,7 +167,7 @@ jobs:
 
       - name: Build apko image (with melange keyring)
         if: ${{ matrix.skip != true && matrix.has_apko == true && matrix.has_melange == true }}
-        uses: chainguard-images/actions/apko-build@95c64af473be476d6169619eb2f372e72b3a1562 # v1.0.11
+        uses: chainguard-images/actions/apko-build@e5d6a11455945e9cbbba711b4693de8b35bbf15d # v1.0.17
         with:
           config: ${{ matrix.component_dir }}/apko.yaml
           tag: ${{ needs.setup.outputs.base-image-repo }}/${{ matrix.component_name }}:${{ needs.setup.outputs.snapshot-date }}
@@ -177,7 +177,7 @@ jobs:
 
       - name: Build apko image (no melange keyring)
         if: ${{ matrix.skip != true && matrix.has_apko == true && matrix.has_melange != true }}
-        uses: chainguard-images/actions/apko-build@95c64af473be476d6169619eb2f372e72b3a1562 # v1.0.11
+        uses: chainguard-images/actions/apko-build@e5d6a11455945e9cbbba711b4693de8b35bbf15d # v1.0.17
         with:
           config: ${{ matrix.component_dir }}/apko.yaml
           tag: ${{ needs.setup.outputs.base-image-repo }}/${{ matrix.component_name }}:${{ needs.setup.outputs.snapshot-date }}
