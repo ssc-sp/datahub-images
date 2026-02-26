@@ -1,5 +1,5 @@
 ---
-name: Publish Containers (Apko/Melange)
+name: Publish apko/melange (changed only)
 
 on:
   push:
@@ -10,151 +10,307 @@ on:
 
 permissions: read-all
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  build-publish:
+  setup:
+    name: Setup
+    runs-on: ubuntu-latest
+    permissions: {}
+    outputs:
+      snapshot-date: ${{ steps.meta.outputs.date }}
+      snapshot-epoch: ${{ steps.meta.outputs.epoch }}
+      base-image-repo: ${{ steps.meta.outputs.base_image_repo }}
+      arch-suffixes: "amd64 arm64 arm"
+    steps:
+      - id: meta
+        run: |
+          echo "date=$(date -u +%Y%m%d)" >> "$GITHUB_OUTPUT"
+          echo "epoch=$(date +%s)" >> "$GITHUB_OUTPUT"
+          # ghcr.io/owner/repo (lowercased)
+          echo "base_image_repo=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+
+  detect:
+    name: Detect changed melange/apko units
+    needs: setup
     runs-on: ubuntu-latest
     permissions:
-      contents: write
-      packages: write
-      security-events: write
-      id-token: write
+      contents: read
+    outputs:
+      count: ${{ steps.detect.outputs.count }}
+      build_matrix: ${{ steps.detect.outputs.build_matrix }}
+      component_matrix: ${{ steps.detect.outputs.component_matrix }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 #v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          fetch-depth: 1
+          fetch-depth: 0
           persist-credentials: false
 
-      - name: Setup Melange
-        uses: chainguard-dev/actions/setup-melange@main
-
-      - name: Setup Apko
-        uses: chainguard-dev/actions/setup-apko@main
-
-      - name: Get list of changed files
-        id: get_changed_files
+      - id: detect
+        name: Detect build units
+        shell: bash
         run: |
-          changed_files=$(git diff --name-only "${{ github.event.before }}" "${{ github.sha }}")
-          changed_files_json=$(echo "$changed_files" | jq -R -s -c 'split("\n")[:-1] | map(select(length > 0))')
-          echo "Changed files: $changed_files"
-          echo "changed_files=$changed_files_json" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
 
-      - name: Generate list of apko components to build
-        id: generate_apko_list
-        run: |
-          changed_files_json='${{ steps.get_changed_files.outputs.changed_files }}'
-          mapfile -t changed_files_list < <(echo "$changed_files_json" | jq -r '.[]')
+          BEFORE="${{ github.event.before }}"
+          AFTER="${{ github.sha }}"
 
-          apko_files_to_build=()
-          for file in "${changed_files_list[@]}"; do
-            # If any file inside a component folder changes, rebuild its apko.yaml
-            if [[ $file == managed-containers/*/* ]]; then
-              top_level_dir=$(echo "$file" | cut -d'/' -f1-2)
-              if [[ -f "$top_level_dir/apko.yaml" ]]; then
-                apko_files_to_build+=("$top_level_dir/apko.yaml")
+          declare -A roots=()
+
+          # Walk each changed file upward until we find a folder containing melange.yaml or apko.yaml.
+          while IFS= read -r -d '' f; do
+            dir="$(dirname "$f")"
+            while [[ "$dir" != "." && "$dir" != "/" ]]; do
+              if [[ -f "$dir/melange.yaml" || -f "$dir/apko.yaml" ]]; then
+                roots["$dir"]=1
+                break
               fi
-            fi
+
+              # Stop climbing once we reach managed-containers (avoid tagging the whole repo)
+              if [[ "$dir" == "managed-containers" ]]; then
+                break
+              fi
+
+              dir="$(dirname "$dir")"
+            done
+          done < <(git diff --name-only -z "$BEFORE" "$AFTER" -- 'managed-containers/**')
+
+          components='[]'
+
+          for dir in "${!roots[@]}"; do
+            name="$(basename "$dir" | tr '[:upper:]' '[:lower:]')"
+
+            has_melange=false
+            [[ -f "$dir/melange.yaml" ]] && has_melange=true
+
+            has_apko=false
+            [[ -f "$dir/apko.yaml" ]] && has_apko=true
+
+            components="$(jq -c \
+              --arg dir "$dir" \
+              --arg name "$name" \
+              --argjson has_melange "$has_melange" \
+              --argjson has_apko "$has_apko" \
+              '. + [{component_dir:$dir, component_name:$name, has_melange:$has_melange, has_apko:$has_apko}]' \
+              <<<"$components")"
           done
 
-          # Remove duplicates
-          mapfile -t unique_apko_to_build < <(printf "%s\n" "${apko_files_to_build[@]}" | sort -u)
+          # Stable order
+          components="$(jq -c 'sort_by(.component_dir)' <<<"$components")"
+          count="$(jq -r 'length' <<<"$components")"
 
-          if[ ${#unique_apko_to_build[@]} -eq 0 ]; then
-            echo "No apko.yaml configs found to build. Exiting..."
+          echo "Detected units: $(jq -r '.[].component_dir' <<<"$components" | tr '\n' ' ' || true)"
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+
+          if [[ "$count" -eq 0 ]]; then
+            echo 'build_matrix={"include":[{"skip":true}]}' >> "$GITHUB_OUTPUT"
+            echo 'component_matrix={"include":[{"skip":true}]}' >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          echo "Unique configs to build: ${unique_apko_to_build[*]}"
-          unique_apko_json=$(printf '%s\n' "${unique_apko_to_build[@]}" | jq -R -s -c 'split("\n") | map(select(length > 0))')
-          echo "apko_to_build=$unique_apko_json" >> "$GITHUB_OUTPUT"
+          archs='[
+            {"arch":"x86_64","tag_suffix":"amd64"},
+            {"arch":"aarch64","tag_suffix":"arm64"},
+            {"arch":"armv7","tag_suffix":"arm"}
+          ]'
 
-      - name: Set up Trivy
-        uses: aquasecurity/setup-trivy@ff1b8b060f23b650436d419b5e13f67f5d4c3087 # v0.2.2
+          build_matrix="$(jq -c -n \
+            --argjson components "$components" \
+            --argjson archs "$archs" \
+            '{include:[ $components[] as $c | $archs[] as $a | $c + $a ] }')"
 
-      - name: Setup JFrog CLI (OIDC)
-        id: setup-jfrog-cli
-        uses: jfrog/setup-jfrog-cli@279b1f629f43dd5bc658d8361ac4802a7ef8d2d5 #v4.9.1
+          component_matrix="$(jq -c -n \
+            --argjson components "$components" \
+            '{include:$components}')"
+
+          echo "build_matrix=$build_matrix" >> "$GITHUB_OUTPUT"
+          echo "component_matrix=$component_matrix" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build & Push (${{ matrix.component_name }} / ${{ matrix.arch }})
+    needs: [setup, detect]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.detect.outputs.build_matrix) }}
+
+    steps:
+      - name: Skip (no matching changes)
+        if: ${{ matrix.skip == true }}
+        run: echo "No melange.yaml/apko.yaml units affected. Nothing to build."
+
+      - name: Checkout repository
+        if: ${{ matrix.skip != true }}
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup QEMU
+        if: ${{ matrix.skip != true && (matrix.has_apko == true || matrix.has_melange == true) }}
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
+
+      - name: Build melange packages
+        if: ${{ matrix.skip != true && matrix.has_melange == true }}
+        uses: chainguard-dev/actions/melange-build@3e8a2a226fad9e1ecbf2d359b8a7697554a4ac6d # v1.5.10
+        with:
+          sign-with-temporary-key: true
+          signing-key-path: melange.rsa
+          config: ${{ matrix.component_dir }}/melange.yaml
+          archs: ${{ matrix.arch }}
+
+      - name: Build apko image (with melange keyring)
+        if: ${{ matrix.skip != true && matrix.has_apko == true && matrix.has_melange == true }}
+        uses: chainguard-images/actions/apko-build@95c64af473be476d6169619eb2f372e72b3a1562 # v1.0.11
+        with:
+          config: ${{ matrix.component_dir }}/apko.yaml
+          tag: ${{ needs.setup.outputs.base-image-repo }}/${{ matrix.component_name }}:${{ needs.setup.outputs.snapshot-date }}
+          keyring-append: melange.rsa.pub
+          archs: ${{ matrix.arch }}
+          source-date-epoch: ${{ needs.setup.outputs.snapshot-epoch }}
+
+      - name: Build apko image (no melange keyring)
+        if: ${{ matrix.skip != true && matrix.has_apko == true && matrix.has_melange != true }}
+        uses: chainguard-images/actions/apko-build@95c64af473be476d6169619eb2f372e72b3a1562 # v1.0.11
+        with:
+          config: ${{ matrix.component_dir }}/apko.yaml
+          tag: ${{ needs.setup.outputs.base-image-repo }}/${{ matrix.component_name }}:${{ needs.setup.outputs.snapshot-date }}
+          archs: ${{ matrix.arch }}
+          source-date-epoch: ${{ needs.setup.outputs.snapshot-epoch }}
+
+      - name: Login to GHCR
+        if: ${{ matrix.skip != true && matrix.has_apko == true }}
+        run: echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Push arch image
+        if: ${{ matrix.skip != true && matrix.has_apko == true }}
         env:
-          JF_URL: https://artifacts-artefacts.devops.cloud-nuage.canada.ca
-        with:
-          oidc-provider-name: github-oidc
-
-      - name: Secure GC Artifacts login
-        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 #v3.7.0
-        with:
-          registry: https://artifacts-artefacts.devops.cloud-nuage.canada.ca
-          username: ${{ steps.setup-jfrog-cli.outputs.oidc-user }}
-          password: ${{ steps.setup-jfrog-cli.outputs.oidc-token }}
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 #v3.7.0
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and Scan Apko Images
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          MELANGE_RSA: ${{ secrets.MELANGE_RSA }}
+          BASE_REPO: ${{ needs.setup.outputs.base-image-repo }}
+          COMP: ${{ matrix.component_name }}
+          DATE: ${{ needs.setup.outputs.snapshot-date }}
+          SUFFIX: ${{ matrix.tag_suffix }}
+        shell: bash
         run: |
-          apko_json='${{ steps.generate_apko_list.outputs.apko_to_build }}'
-          mapfile -t apko_list < <(echo "$apko_json" | jq -r '.[]')
+          set -euo pipefail
 
-          mkdir -p trivy-results
+          # apko-build writes output.tar
+          LOAD_OUTPUT="$(docker load < output.tar)"
+          LOADED_TAG="$(echo "$LOAD_OUTPUT" | awk '/Loaded image:/ {print $3; exit}')"
 
-          # 1. Ensure bit-for-bit reproducibility using the Git commit timestamp
-          export SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)
-          CREATED="$(git show -s --format=%cI ${GITHUB_SHA})"
-          
-          REVISION="${GITHUB_SHA}"
-          REF_NAME="${{ github.ref_name }}"
-          SOURCE_URL="https://github.com/${{ github.repository }}"
+          IMAGE_REPO="${BASE_REPO}/${COMP}"
+          TARGET_TAG="${IMAGE_REPO}:${DATE}-${SUFFIX}"
 
-          # 2. Prepare the private signing key
-          echo "$MELANGE_RSA" > /tmp/melange.rsa
-          chmod 600 /tmp/melange.rsa
+          echo "Loaded:  $LOADED_TAG"
+          echo "Pushing: $TARGET_TAG"
 
-          for apko_file in "${apko_list[@]}"; do
-            component_dir="$(dirname "$apko_file")"
-            package_name="$(basename "$component_dir" | tr '[:upper:]' '[:lower:]')"
-            repo_path="ghcr.io/${{ github.repository_owner }}/$package_name:latest"
+          docker tag "$LOADED_TAG" "$TARGET_TAG"
+          docker push "$TARGET_TAG"
 
-            echo "Building component: $package_name"
-            
-            # Change into the directory so apko/melange paths resolve correctly
-            cd "$GITHUB_WORKSPACE/$component_dir"
+  manifest:
+    name: Publish multi-arch manifest (${{ matrix.component_name }})
+    needs: [setup, detect, build]
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      id-token: write
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.detect.outputs.component_matrix) }}
 
-            # 3. Build local packages if melange.yaml exists
-            if[ -f "melange.yaml" ]; then
-              echo "Found melange.yaml, building local package..."
-              melange build melange.yaml \
-                --arch x86_64 \
-                --signing-key /tmp/melange.rsa \
-                --repository-append ./packages
-            fi
+    steps:
+      - name: Skip (no matching changes)
+        if: ${{ matrix.skip == true }}
+        run: echo "No components to publish."
 
-            # 4. Build and push the image directly to the registry using apko
-            # Note: apko publish handles building and pushing in one step
-            echo "Publishing Apko image to $repo_path..."
-            apko publish apko.yaml "$repo_path" \
-              --lockfile apko.lock.json \
-              --arch x86_64 \
-              --keyring-append melange.rsa.pub \
-              --annotations org.opencontainers.image.revision="${REVISION}" \
-              --annotations org.opencontainers.image.created="${CREATED}" \
-              --annotations org.opencontainers.image.ref.name="${REF_NAME}" \
-              --annotations org.opencontainers.image.source="${SOURCE_URL}"
+      - uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad # v4.0.0
+        if: ${{ matrix.skip != true && matrix.has_apko == true }}
 
-            # 5. Scan the remote image with Trivy
-            echo "Scanning $repo_path..."
-            trivy image --severity CRITICAL,HIGH --format sarif --output "$GITHUB_WORKSPACE/trivy-results/${package_name}.sarif" "$repo_path"
-            
-            # Go back to workspace root for the next iteration
-            cd "$GITHUB_WORKSPACE"
+      - name: Login to GHCR
+        if: ${{ matrix.skip != true && matrix.has_apko == true }}
+        run: echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Create and push manifests (date + latest)
+        if: ${{ matrix.skip != true && matrix.has_apko == true }}
+        env:
+          BASE_REPO: ${{ needs.setup.outputs.base-image-repo }}
+          COMP: ${{ matrix.component_name }}
+          DATE: ${{ needs.setup.outputs.snapshot-date }}
+          SUFFIXES: ${{ needs.setup.outputs.arch-suffixes }} # "amd64 arm64 arm"
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          IMAGE_REPO="${BASE_REPO}/${COMP}"
+
+          SOURCE_IMAGES=""
+          for suffix in $SUFFIXES; do
+            SOURCE_IMAGES="$SOURCE_IMAGES $IMAGE_REPO:$DATE-$suffix"
           done
 
+          TARGETS="$IMAGE_REPO:$DATE $IMAGE_REPO:latest"
+
+          for target in $TARGETS; do
+            echo "Creating manifest for $target"
+            docker manifest create "$target" $SOURCE_IMAGES
+
+            if [[ "$SUFFIXES" == *"arm"* ]]; then
+              echo "Annotating armv7 for $target"
+              docker manifest annotate "$target" "$IMAGE_REPO:$DATE-arm" --os linux --arch arm --variant v7
+            fi
+
+            docker manifest push "$target"
+            cosign sign --yes "$target"
+          done
+
+  scan:
+    name: Trivy scan (${{ matrix.component_name }})
+    needs: [setup, detect, manifest]
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      packages: read
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.detect.outputs.component_matrix) }}
+
+    steps:
+      - name: Skip (no matching changes)
+        if: ${{ matrix.skip == true }}
+        run: echo "No components to scan."
+
+      - name: Set up Trivy
+        if: ${{ matrix.skip != true && matrix.has_apko == true }}
+        uses: aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514 # v0.2.5
+
+      - name: Login to GHCR (for pulls)
+        if: ${{ matrix.skip != true && matrix.has_apko == true }}
+        run: echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Scan image (date tag)
+        if: ${{ matrix.skip != true && matrix.has_apko == true }}
+        env:
+          BASE_REPO: ${{ needs.setup.outputs.base-image-repo }}
+          COMP: ${{ matrix.component_name }}
+          DATE: ${{ needs.setup.outputs.snapshot-date }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p trivy-results
+
+          IMAGE="${BASE_REPO}/${COMP}:${DATE}"
+          OUT="trivy-results/${COMP}.sarif"
+
+          echo "Scanning: $IMAGE"
+          trivy image --severity CRITICAL,HIGH --format sarif --output "$OUT" "$IMAGE"
+
       - name: Upload SARIF to GitHub Code Scanning
+        if: ${{ matrix.skip != true && matrix.has_apko == true }}
         uses: github/codeql-action/upload-sarif@9e907b5e64f6b83e7804b09294d44122997950d6 # v4.32.3
         with:
           sarif_file: trivy-results/
