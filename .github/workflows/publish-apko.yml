@@ -158,7 +158,7 @@ jobs:
 
       - name: Build melange packages
         if: ${{ matrix.skip != true && matrix.has_melange == true }}
-        uses: chainguard-dev/actions/melange-build@3e8a2a226fad9e1ecbf2d359b8a7697554a4ac6d # v1.5.10
+        uses: chainguard-dev/actions/melange-build@eab208ef2d05b13404296a5e194a6b237e8bb213 # v1.6.4
         with:
           sign-with-temporary-key: true
           signing-key-path: melange.rsa
