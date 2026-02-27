@@ -116,9 +116,7 @@ jobs:
               continue
             fi
 
-            # Store absolute path for consistent output/logging
-            real_dir="$(realpath -m -- "$dir")"
-            echo "$real_dir" >> "$build_dirs_tmp"
+            echo "$dir" >> "$build_dirs_tmp"
           done <<< "$projects"
 
           if [ "$missing_required" -ne 0 ]; then
