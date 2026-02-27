@@ -174,3 +174,27 @@ jobs:
           echo "count=$count" >> "$GITHUB_OUTPUT"
         env:
           STEPS_CHANGED_OUTPUTS_CHANGED_FILES: ${{ steps.changed.outputs.changed_files }}
+
+  build-and-scan:
+    permissions:
+      id-token: write
+    needs: [prepare-matrix]
+    if: ${{ fromJson(needs.prepare-matrix.outputs.count) > 0 }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.prepare-matrix.outputs.matrix) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup GC Secure Artifacts and JFrog CLI
+        id: setup-jfrog-cli
+        uses: jfrog/setup-jfrog-cli@279b1f629f43dd5bc658d8361ac4802a7ef8d2d5 #v4.9.1
+        env:
+          JF_URL: https://artifacts-artefacts.devops.cloud-nuage.canada.ca
+        with:
+          oidc-provider-name: github-oidc
