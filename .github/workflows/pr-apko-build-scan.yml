@@ -191,6 +191,13 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Generate snapshot date
+        id: snapshot-date
+        run: |
+          echo "date=$(date -u +%Y%m%d)" >> $GITHUB_OUTPUT
+          echo "epoch=$(date +%s)" >> $GITHUB_OUTPUT
+        shell: bash    
+
       - name: Setup GC Secure Artifacts and JFrog CLI
         id: setup-jfrog-cli
         uses: jfrog/setup-jfrog-cli@279b1f629f43dd5bc658d8361ac4802a7ef8d2d5 #v4.9.1
@@ -198,3 +205,11 @@ jobs:
           JF_URL: https://artifacts-artefacts.devops.cloud-nuage.canada.ca
         with:
           oidc-provider-name: github-oidc
+
+      - uses: chainguard-dev/actions/melange-build@3e8a2a226fad9e1ecbf2d359b8a7697554a4ac6d # v1.5.10
+        working-directory: ${{ matrix.dir }}
+        with:
+          sign-with-temporary-key: true
+          signing-key-path: melange.rsa
+          config: melange.yaml
+          archs: ${{ matrix.arch }}
