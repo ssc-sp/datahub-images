@@ -212,6 +212,7 @@ jobs:
           config: melange.yaml
           sign-with-temporary-key: true
           signing-key-path: ${{ github.workspace }}/melange.rsa
+          repository-path: ${{ github.workspace }}/${{ matrix.dir }}/packages
           
 
       #- uses: chainguard-images/actions/apko-publish@95c64af473be476d6169619eb2f372e72b3a1562 # 
