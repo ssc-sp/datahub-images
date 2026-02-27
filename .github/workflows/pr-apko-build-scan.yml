@@ -1,0 +1,129 @@
+name: Pull Request - Build and Scan APKO - Melange
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "apko-containers/**"
+
+permissions: read-all
+
+jobs:
+  prepare-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.mk-matrix.outputs.matrix }}
+      count: ${{ steps.mk-matrix.outputs.count }}
+    permissions:
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Generated Changed Files JSON
+        id: changed
+        run: |
+          set -euo pipefail
+          base="${{ github.event.pull_request.base.sha }}"
+          head="${{ github.sha }}"
+
+          # Use -z for NUL-delimited robustness; also filter to apko-containers/**
+          changed_files_json="$(
+            git diff --name-only -z "$base" "$head" -- 'apko-containers/**' \
+            | jq -Rs 'split("\u0000") | map(select(length>0))'
+          )"
+
+          echo "Changed files JSON:"
+          echo "$changed_files_json" | jq '.'
+
+          {
+            echo 'changed_files<<__JSON__'
+            echo "$changed_files_json"
+            echo '__JSON__'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Generated associated effected apko/melange files.
+        id: mk-matrix
+        run: |
+          set -euo pipefail
+
+          changed_files_json="${STEPS_CHANGED_OUTPUTS_CHANGED_FILES}"
+
+          # Derive unique component roots: apko-containers/<component>
+          components="$(
+            echo "$changed_files_json" \
+            | jq -r '.[]' \
+            | awk -F/ '/^apko-containers\// && NF>=2 {print $1"/"$2}' \
+            | awk '!seen[$0]++'
+          )"
+
+          dockerfiles_list_raw=""
+
+          # Include top-level Dockerfile per component if present
+          while IFS= read -r comp; do
+            [ -z "$comp" ] && continue
+            if [ -f "$comp/Dockerfile" ]; then
+              dockerfiles_list_raw+="$comp/Dockerfile"$'\n'
+            fi
+          done <<< "$components"
+
+          # Also include any Dockerfiles that were themselves changed (nested images)
+          direct_dockerfiles="$(
+            echo "$changed_files_json" | jq -r '.[]' | grep -E '(^|/)[Dd]ockerfile$' || true
+          )"
+          dockerfiles_list_raw+="$direct_dockerfiles"$'\n'
+
+          # Normalize paths, dedupe, AND CHECK EXISTENCE
+          normalized_paths="$(
+            printf '%s' "$dockerfiles_list_raw" \
+            | sed '/^$/d; s#^\./##; s#/\+#/#g' \
+            | while IFS= read -r p; do
+                [ -z "$p" ] && continue
+                
+                resolved_path=$(realpath -m -- "$p")
+                
+                if [ -f "$resolved_path" ]; then
+                  echo "$resolved_path"
+                fi
+              done
+          )"
+
+          dockerfiles_all="$(printf '%s\n' "$normalized_paths" | awk '!seen[$0]++')"
+          count="$(printf '%s\n' "$dockerfiles_all" | sed '/^$/d' | wc -l | tr -d ' ')"
+
+          echo "Found $count Dockerfile(s) to build:"
+          printf '%s\n' "$dockerfiles_all"
+
+          if [ "$count" -eq 0 ]; then
+            echo 'matrix={"include":[]}' >> "$GITHUB_OUTPUT"
+            echo "count=0" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          matrix_json=$(
+            while IFS= read -r dockerfile; do
+              [ -z "$dockerfile" ] && continue
+              context="$(dirname -- "$dockerfile")"
+              base="$(basename -- "$context")"
+              safe_base="$(printf '%s' "$base" \
+                | tr '[:upper:]' '[:lower:]' \
+                | sed -E 's/[^a-z0-9._-]+/-/g; s/^-+//; s/-+$//; s/-{2,}/-/g')"
+              [ -z "$safe_base" ] && safe_base="image"
+              image_name="${safe_base}:latest"
+              printf '{"dockerfile":"%s","context":"%s","image":"%s"}\n' \
+                "$dockerfile" "$context" "$image_name"
+            done <<< "$dockerfiles_all" | jq -s '{include: .}'
+          )
+
+          {
+            echo 'matrix<<__JSON__'
+            echo "$matrix_json"
+            echo '__JSON__'
+          } >> "$GITHUB_OUTPUT"
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+        env:
+          STEPS_CHANGED_OUTPUTS_CHANGED_FILES: ${{ steps.changed.outputs.changed_files }}
