@@ -191,6 +191,12 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Show package directory
+        run: |
+          echo "Package: ${{ matrix.package }}"
+          echo "Dir:     ${{ matrix.dir }}"
+          ls -la "${{ matrix.dir }}"
+
       - name: Generate snapshot date
         id: snapshot-date
         run: |
@@ -207,9 +213,8 @@ jobs:
           oidc-provider-name: github-oidc
 
       - uses: chainguard-dev/actions/melange-build@3e8a2a226fad9e1ecbf2d359b8a7697554a4ac6d # v1.5.10
-        working-directory: ${{ matrix.dir }}
         with:
           sign-with-temporary-key: true
           signing-key-path: melange.rsa
-          config: melange.yaml
-          archs: ${{ matrix.arch }}
+          config: ${{ matrix.melange }}
+          archs: x86_64
