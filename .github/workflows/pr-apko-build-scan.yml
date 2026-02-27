@@ -216,7 +216,7 @@ jobs:
           
 
       #- uses: chainguard-images/actions/apko-publish@95c64af473be476d6169619eb2f372e72b3a1562 # 
-      - uses: KingBain/chainguard-actions/apko-publish@28dc5ddee6bddb7f0b9a58df6ff16246dacea36e
+      - uses: KingBain/chainguard-actions/apko-build@547119fc84ae95d1f0953bf4c753648a38365581
         with:
           workdir: ${{ matrix.dir }}
           config: apko.yaml
