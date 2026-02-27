@@ -201,18 +201,24 @@ jobs:
           echo "epoch=$(date +%s)" >> $GITHUB_OUTPUT
         shell: bash    
 
-      - name: Setup GC Secure Artifacts and JFrog CLI
-        id: setup-jfrog-cli
-        uses: jfrog/setup-jfrog-cli@279b1f629f43dd5bc658d8361ac4802a7ef8d2d5 #v4.9.1
-        env:
-          JF_URL: https://artifacts-artefacts.devops.cloud-nuage.canada.ca
-        with:
-          oidc-provider-name: github-oidc
+      - name: Setup QEMU
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
+
+      - uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad # v4.0.0
 
       - uses: chainguard-dev/actions/melange-build@3e8a2a226fad9e1ecbf2d359b8a7697554a4ac6d # v1.5.10
         with:
-          sign-with-temporary-key: true
-          signing-key-path: ${{ github.workspace }}/melange.rsa
           workdir: ${{ matrix.dir }}
           config: melange.yaml
+          sign-with-temporary-key: true
+          signing-key-path: ${{ github.workspace }}/melange.rsa
+          
+
+      - uses: chainguard-images/actions/apko-build@95c64af473be476d6169619eb2f372e72b3a1562 # v1.0.11
+        with:
+          workdir: ${{ matrix.dir }}
+          config: apko.yaml
+          tag: ${{ matrix.package }}:${{ steps.snapshot-date.outputs.date }}-${{ github.sha }}
+          keyring-append: ${{ github.workspace }}/melange.rsa.pub
           archs: x86_64
+          source-date-epoch: ${{ needs.setup.outputs.snapshot-epoch }}
