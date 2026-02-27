@@ -44,3 +44,4 @@ if [ ! -s "$JWT_TOKEN_FILEPATH" ]; then
 fi
 
 echo "JWT successfully written to $JWT_TOKEN_FILEPATH"
+

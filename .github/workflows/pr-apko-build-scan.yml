@@ -1,0 +1,227 @@
+name: Pull Request - Build and Scan APKO - Melange
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "apko-containers/**"
+
+permissions: read-all
+
+jobs:
+  prepare-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.mk-matrix.outputs.matrix }}
+      count: ${{ steps.mk-matrix.outputs.count }}
+    permissions:
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Generated Changed Files JSON
+        id: changed
+        run: |
+          set -euo pipefail
+          base="${{ github.event.pull_request.base.sha }}"
+          head="${{ github.sha }}"
+
+          # Use -z for NUL-delimited robustness; also filter to apko-containers/**
+          changed_files_json="$(
+            git diff --name-only -z "$base" "$head" -- 'apko-containers/**' \
+            | jq -Rs 'split("\u0000") | map(select(length>0))'
+          )"
+
+          echo "Changed files JSON:"
+          echo "$changed_files_json" | jq '.'
+
+          {
+            echo 'changed_files<<__JSON__'
+            echo "$changed_files_json"
+            echo '__JSON__'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Generated associated effected apko/melange files.
+        id: mk-matrix
+        run: |
+          set -euo pipefail
+
+          changed_files_json="${STEPS_CHANGED_OUTPUTS_CHANGED_FILES}"
+
+          echo "Changed files JSON:"
+          echo "$changed_files_json" | jq '.'
+
+          projects_tmp="$(mktemp)"
+          bad_root_file=0
+
+          # 1) Identify affected projects + detect forbidden files at apko-containers/ root
+          while IFS= read -r f; do
+            [ -z "$f" ] && continue
+            f="${f#./}"
+
+            # If a file exists directly under apko-containers/, fail (e.g., apko-containers/bad.yaml)
+            if [[ "$f" =~ ^apko-containers/[^/]+$ ]]; then
+              echo "::error::Invalid file at apko-containers/ root: '$f'. Only directories are allowed under apko-containers/."
+              bad_root_file=1
+              continue
+            fi
+
+            # Extract the project folder name (apko-containers/<project>/...)
+            if [[ "$f" =~ ^apko-containers/([^/]+)/ ]]; then
+              echo "${BASH_REMATCH[1]}" >> "$projects_tmp"
+            fi
+          done < <(echo "$changed_files_json" | jq -r '.[]')
+
+          if [ "$bad_root_file" -ne 0 ]; then
+            exit 1
+          fi
+
+          # Unique project names
+          projects="$(sort -u "$projects_tmp" | sed '/^$/d')"
+
+          # 2) Validate projects exist + required files exist, skipping deleted projects
+          build_dirs_tmp="$(mktemp)"
+          missing_required=0
+
+          while IFS= read -r project; do
+            [ -z "$project" ] && continue
+
+            dir="apko-containers/$project"
+
+            # If the project directory doesn't exist anymore, it was deleted -> skip
+            if [ ! -d "$dir" ]; then
+              echo "Skipping deleted project: $dir"
+              continue
+            fi
+
+            apko_file=""
+            if [ -f "$dir/apko.yaml" ]; then apko_file="$dir/apko.yaml"; fi
+            if [ -z "$apko_file" ] && [ -f "$dir/apko.yml" ]; then apko_file="$dir/apko.yml"; fi
+
+            melange_file=""
+            if [ -f "$dir/melange.yaml" ]; then melange_file="$dir/melange.yaml"; fi
+            if [ -z "$melange_file" ] && [ -f "$dir/melange.yml" ]; then melange_file="$dir/melange.yml"; fi
+
+            # If project exists, it MUST have both apko + melange at its root
+            if [ -z "$apko_file" ] || [ -z "$melange_file" ]; then
+              echo "::error::Project '$dir' must contain apko.yaml|yml AND melange.yaml|yml at the project root."
+              echo "  Found apko:    ${apko_file:-<missing>}"
+              echo "  Found melange: ${melange_file:-<missing>}"
+              missing_required=1
+              continue
+            fi
+
+            echo "$dir" >> "$build_dirs_tmp"
+          done <<< "$projects"
+
+          if [ "$missing_required" -ne 0 ]; then
+            exit 1
+          fi
+
+          # Dedupe build dirs (just in case)
+          build_dirs="$(sort -u "$build_dirs_tmp" | sed '/^$/d')"
+
+          echo ""
+          echo "Found apko projects to build:"
+          if [ -n "$build_dirs" ]; then
+            echo "$build_dirs"
+          else
+            echo "(none)"
+          fi
+
+          count="$(printf '%s\n' "$build_dirs" | sed '/^$/d' | wc -l | tr -d ' ')"
+
+          # 3) Build matrix (scaffold kept: base/safe_base + JSON lines + jq -s)
+          matrix_json=$(
+            while IFS= read -r dir; do
+              [ -z "$dir" ] && continue
+
+              base="$(basename -- "$dir")"
+
+              safe_base="$(printf '%s' "$base" \
+                | tr '[:upper:]' '[:lower:]' \
+                | sed -E 's/[^a-z0-9._-]+/-/g; s/^-+//; s/-+$//; s/-{2,}/-/g')"
+              [ -z "$safe_base" ] && safe_base="package"
+
+              apko=""
+              if [ -f "$dir/apko.yaml" ]; then apko="$dir/apko.yaml"; fi
+              if [ -z "$apko" ] && [ -f "$dir/apko.yml" ]; then apko="$dir/apko.yml"; fi
+
+              melange=""
+              if [ -f "$dir/melange.yaml" ]; then melange="$dir/melange.yaml"; fi
+              if [ -z "$melange" ] && [ -f "$dir/melange.yml" ]; then melange="$dir/melange.yml"; fi
+
+              # Keep an "image" field (like your docker scaffold) for downstream build/scan steps.
+              image_name="${safe_base}:latest"
+
+              printf '{"package":"%s","dir":"%s","apko":"%s","melange":"%s","image":"%s"}\n' \
+                "$base" "$dir" "$apko" "$melange" "$image_name"
+            done <<< "$build_dirs" | jq -s '{include: .}'
+          )
+
+          {
+            echo 'matrix<<__JSON__'
+            echo "$matrix_json"
+            echo '__JSON__'
+          } >> "$GITHUB_OUTPUT"
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+        env:
+          STEPS_CHANGED_OUTPUTS_CHANGED_FILES: ${{ steps.changed.outputs.changed_files }}
+
+  build-and-scan:
+    permissions:
+      id-token: write
+    needs: [prepare-matrix]
+    if: ${{ fromJson(needs.prepare-matrix.outputs.count) > 0 }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.prepare-matrix.outputs.matrix) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Show package directory
+        run: |
+          echo "Package: ${{ matrix.package }}"
+          echo "Dir:     ${{ matrix.dir }}"
+          ls -la "${{ matrix.dir }}"
+
+      - name: Generate snapshot date
+        id: snapshot-date
+        run: |
+          echo "date=$(date -u +%Y%m%d)" >> $GITHUB_OUTPUT
+          echo "epoch=$(date +%s)" >> $GITHUB_OUTPUT
+        shell: bash    
+
+      - name: Setup QEMU
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
+
+      - uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad # v4.0.0
+
+      - uses: chainguard-dev/actions/melange-build@3e8a2a226fad9e1ecbf2d359b8a7697554a4ac6d # v1.5.10
+        with:
+          workdir: ${{ matrix.dir }}
+          config: melange.yaml
+          sign-with-temporary-key: true
+          signing-key-path: ${{ github.workspace }}/melange.rsa
+          repository-path: ${{ github.workspace }}/${{ matrix.dir }}/packages
+          
+
+      #- uses: chainguard-images/actions/apko-publish@95c64af473be476d6169619eb2f372e72b3a1562 # 
+      - uses: KingBain/chainguard-actions/apko-build@547119fc84ae95d1f0953bf4c753648a38365581
+        with:
+          workdir: ${{ matrix.dir }}
+          config: apko.yaml
+          tag: ${{ matrix.package }}:${{ steps.snapshot-date.outputs.date }}-${{ github.sha }}
+          keyring-append: ${{ github.workspace }}/melange.rsa.pub
+          archs: x86_64
+          source-date-epoch: ${{ needs.setup.outputs.snapshot-epoch }}
+

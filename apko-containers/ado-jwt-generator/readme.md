@@ -86,3 +86,5 @@ If you need to rebuild this image a month from now and guarantee the exact same 
 1. **The Code:** `melange` builds `entrypoint.sh` using the same `SOURCE_DATE_EPOCH`, resulting in an identical `.apk`.
 2. **The Signature:** Re-using the same `melange.rsa` private key ensures the package signature hasn't changed.
 3. **The OS Dependencies:** Using `apko build --lockfile` strictly enforces that `apko` fetches the exact same versions of `busybox`, `curl`, etc., from the Alpine repositories as it did a month ago.
+
+

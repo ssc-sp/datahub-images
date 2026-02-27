@@ -1,4 +1,4 @@
-name: Pull Request - Build and Scan
+name: Pull Request - Build and Scan Dockerfiles
 
 on:
   pull_request:
