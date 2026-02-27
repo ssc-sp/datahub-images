@@ -53,70 +53,117 @@ jobs:
 
           changed_files_json="${STEPS_CHANGED_OUTPUTS_CHANGED_FILES}"
 
-          # Derive unique component roots: apko-containers/<component>
-          components="$(
-            echo "$changed_files_json" \
-            | jq -r '.[]' \
-            | awk -F/ '/^apko-containers\// && NF>=2 {print $1"/"$2}' \
-            | awk '!seen[$0]++'
-          )"
+          echo "Changed files JSON:"
+          echo "$changed_files_json" | jq '.'
 
-          dockerfiles_list_raw=""
+          projects_tmp="$(mktemp)"
+          bad_root_file=0
 
-          # Include top-level Dockerfile per component if present
-          while IFS= read -r comp; do
-            [ -z "$comp" ] && continue
-            if [ -f "$comp/Dockerfile" ]; then
-              dockerfiles_list_raw+="$comp/Dockerfile"$'\n'
+          # 1) Identify affected projects + detect forbidden files at apko-containers/ root
+          while IFS= read -r f; do
+            [ -z "$f" ] && continue
+            f="${f#./}"
+
+            # If a file exists directly under apko-containers/, fail (e.g., apko-containers/bad.yaml)
+            if [[ "$f" =~ ^apko-containers/[^/]+$ ]]; then
+              echo "::error::Invalid file at apko-containers/ root: '$f'. Only directories are allowed under apko-containers/."
+              bad_root_file=1
+              continue
             fi
-          done <<< "$components"
 
-          # Also include any Dockerfiles that were themselves changed (nested images)
-          direct_dockerfiles="$(
-            echo "$changed_files_json" | jq -r '.[]' | grep -E '(^|/)[Dd]ockerfile$' || true
-          )"
-          dockerfiles_list_raw+="$direct_dockerfiles"$'\n'
+            # Extract the project folder name (apko-containers/<project>/...)
+            if [[ "$f" =~ ^apko-containers/([^/]+)/ ]]; then
+              echo "${BASH_REMATCH[1]}" >> "$projects_tmp"
+            fi
+          done < <(echo "$changed_files_json" | jq -r '.[]')
 
-          # Normalize paths, dedupe, AND CHECK EXISTENCE
-          normalized_paths="$(
-            printf '%s' "$dockerfiles_list_raw" \
-            | sed '/^$/d; s#^\./##; s#/\+#/#g' \
-            | while IFS= read -r p; do
-                [ -z "$p" ] && continue
-                
-                resolved_path=$(realpath -m -- "$p")
-                
-                if [ -f "$resolved_path" ]; then
-                  echo "$resolved_path"
-                fi
-              done
-          )"
-
-          dockerfiles_all="$(printf '%s\n' "$normalized_paths" | awk '!seen[$0]++')"
-          count="$(printf '%s\n' "$dockerfiles_all" | sed '/^$/d' | wc -l | tr -d ' ')"
-
-          echo "Found $count Dockerfile(s) to build:"
-          printf '%s\n' "$dockerfiles_all"
-
-          if [ "$count" -eq 0 ]; then
-            echo 'matrix={"include":[]}' >> "$GITHUB_OUTPUT"
-            echo "count=0" >> "$GITHUB_OUTPUT"
-            exit 0
+          if [ "$bad_root_file" -ne 0 ]; then
+            exit 1
           fi
 
+          # Unique project names
+          projects="$(sort -u "$projects_tmp" | sed '/^$/d')"
+
+          # 2) Validate projects exist + required files exist, skipping deleted projects
+          build_dirs_tmp="$(mktemp)"
+          missing_required=0
+
+          while IFS= read -r project; do
+            [ -z "$project" ] && continue
+
+            dir="apko-containers/$project"
+
+            # If the project directory doesn't exist anymore, it was deleted -> skip
+            if [ ! -d "$dir" ]; then
+              echo "Skipping deleted project: $dir"
+              continue
+            fi
+
+            apko_file=""
+            if [ -f "$dir/apko.yaml" ]; then apko_file="$dir/apko.yaml"; fi
+            if [ -z "$apko_file" ] && [ -f "$dir/apko.yml" ]; then apko_file="$dir/apko.yml"; fi
+
+            melange_file=""
+            if [ -f "$dir/melange.yaml" ]; then melange_file="$dir/melange.yaml"; fi
+            if [ -z "$melange_file" ] && [ -f "$dir/melange.yml" ]; then melange_file="$dir/melange.yml"; fi
+
+            # If project exists, it MUST have both apko + melange at its root
+            if [ -z "$apko_file" ] || [ -z "$melange_file" ]; then
+              echo "::error::Project '$dir' must contain apko.yaml|yml AND melange.yaml|yml at the project root."
+              echo "  Found apko:    ${apko_file:-<missing>}"
+              echo "  Found melange: ${melange_file:-<missing>}"
+              missing_required=1
+              continue
+            fi
+
+            # Store absolute path for consistent output/logging
+            real_dir="$(realpath -m -- "$dir")"
+            echo "$real_dir" >> "$build_dirs_tmp"
+          done <<< "$projects"
+
+          if [ "$missing_required" -ne 0 ]; then
+            exit 1
+          fi
+
+          # Dedupe build dirs (just in case)
+          build_dirs="$(sort -u "$build_dirs_tmp" | sed '/^$/d')"
+
+          echo ""
+          echo "Found apko projects to build:"
+          if [ -n "$build_dirs" ]; then
+            echo "$build_dirs"
+          else
+            echo "(none)"
+          fi
+
+          count="$(printf '%s\n' "$build_dirs" | sed '/^$/d' | wc -l | tr -d ' ')"
+
+          # 3) Build matrix (scaffold kept: base/safe_base + JSON lines + jq -s)
           matrix_json=$(
-            while IFS= read -r dockerfile; do
-              [ -z "$dockerfile" ] && continue
-              context="$(dirname -- "$dockerfile")"
-              base="$(basename -- "$context")"
+            while IFS= read -r dir; do
+              [ -z "$dir" ] && continue
+
+              base="$(basename -- "$dir")"
+
               safe_base="$(printf '%s' "$base" \
                 | tr '[:upper:]' '[:lower:]' \
                 | sed -E 's/[^a-z0-9._-]+/-/g; s/^-+//; s/-+$//; s/-{2,}/-/g')"
-              [ -z "$safe_base" ] && safe_base="image"
+              [ -z "$safe_base" ] && safe_base="package"
+
+              apko=""
+              if [ -f "$dir/apko.yaml" ]; then apko="$dir/apko.yaml"; fi
+              if [ -z "$apko" ] && [ -f "$dir/apko.yml" ]; then apko="$dir/apko.yml"; fi
+
+              melange=""
+              if [ -f "$dir/melange.yaml" ]; then melange="$dir/melange.yaml"; fi
+              if [ -z "$melange" ] && [ -f "$dir/melange.yml" ]; then melange="$dir/melange.yml"; fi
+
+              # Keep an "image" field (like your docker scaffold) for downstream build/scan steps.
               image_name="${safe_base}:latest"
-              printf '{"dockerfile":"%s","context":"%s","image":"%s"}\n' \
-                "$dockerfile" "$context" "$image_name"
-            done <<< "$dockerfiles_all" | jq -s '{include: .}'
+
+              printf '{"package":"%s","dir":"%s","apko":"%s","melange":"%s","image":"%s"}\n' \
+                "$base" "$dir" "$apko" "$melange" "$image_name"
+            done <<< "$build_dirs" | jq -s '{include: .}'
           )
 
           {
