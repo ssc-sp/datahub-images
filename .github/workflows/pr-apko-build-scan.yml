@@ -214,7 +214,8 @@ jobs:
           signing-key-path: ${{ github.workspace }}/melange.rsa
           
 
-      - uses: chainguard-images/actions/apko-build@95c64af473be476d6169619eb2f372e72b3a1562 # v1.0.11
+      #- uses: chainguard-images/actions/apko-publish@95c64af473be476d6169619eb2f372e72b3a1562 # 
+      - uses: KingBain/chainguard-actions/apko-publish@fe4e117c9032eb05821e9acc2e8bfd2ec587a92a
         with:
           workdir: ${{ matrix.dir }}
           config: apko.yaml
@@ -222,3 +223,4 @@ jobs:
           keyring-append: ${{ github.workspace }}/melange.rsa.pub
           archs: x86_64
           source-date-epoch: ${{ needs.setup.outputs.snapshot-epoch }}
+
