@@ -15,11 +15,6 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates \
  && rm -rf /var/lib/apt/lists/* 
 
-# apt-get snapshot id
-ARG SNAPSHOT_ID=20250530T181600Z
-RUN echo "APT::Snapshot \"${SNAPSHOT_ID}\";" \
-     > /etc/apt/apt.conf.d/50snapshot
-
 # Install snapshotted baseline packages
 RUN apt-get update && \
     xargs -a /tmp/base_packages.list apt-get install -y --no-install-recommends && \
