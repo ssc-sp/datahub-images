@@ -103,12 +103,12 @@ def process_message(message):
 
     print("FSDH - processing blob: " + blob_name_full)
 
-    if config["datahub_container_name"].lower() != blob_name_container:
+    if blob_name_container not in config["datahub_container_name"].lower().split(','):
         print("FSDH - skipping blob not in target container: " + blob_name_full)
         return
 
     blob_client = blob_service_client.get_blob_client(
-        container=config["datahub_container_name"], blob=blob_name_in_container
+        container=blob_name_container, blob=blob_name_in_container
     )
 
     if not blob_client.exists():
