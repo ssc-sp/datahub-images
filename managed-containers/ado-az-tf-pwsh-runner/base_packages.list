@@ -4,8 +4,6 @@ gpg:amd64
 lsb-release:all
 git:amd64
 debsums:all
-liblttng-ust1t64:amd64
-libicu74:amd64
 wget:amd64
 unzip:amd64
 zip:amd64
