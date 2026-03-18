@@ -1,4 +1,4 @@
-openssl:amd64=3.0.13-0ubuntu3.5
+openssl:amd64
 ca-certificates:all=20240203
 jq:amd64=1.7.1-3build1
 curl:amd64=8.5.0-2ubuntu10.6
