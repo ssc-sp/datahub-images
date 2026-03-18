@@ -1,7 +1,7 @@
-FROM ubuntu:24.04@sha256:6015f66923d7afbc53558d7ccffd325d43b4e249f41a6e93eef074c9505d2233
+FROM ubuntu:24.04@sha256:0d39fcc8335d6d74d5502f6df2d30119ff4790ebbb60b364818d5112d9e3e932
 LABEL org.opencontainers.image.description="ADO Linux (ubuntu) Self‑Hosted Runner image with Terraform, PowerShell and the Azure CLI"
-LABEL org.opencontainers.image.source="https://github.com/fsdh-pfds/datahub-images"
-LABEL org.opencontainers.image.url="https://github.com/fsdh-pfds/datahub-images/blob/main/managed-containers/ado-az-tf-pwsh-runner/README.md"
+LABEL org.opencontainers.image.source="https://github.com/ssc-sp/datahub-images"
+LABEL org.opencontainers.image.url="https://github.com/ssc-sp/datahub-images/blob/main/managed-containers/ado-az-tf-pwsh-runner/README.md"
 
 # Enable headless mode
 ENV DEBIAN_FRONTEND=noninteractive
@@ -16,7 +16,7 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/* 
 
 # apt-get snapshot id
-ARG SNAPSHOT_ID=20250530T181600Z
+ARG SNAPSHOT_ID=20260318T000000Z
 RUN echo "APT::Snapshot \"${SNAPSHOT_ID}\";" \
      > /etc/apt/apt.conf.d/50snapshot
 
