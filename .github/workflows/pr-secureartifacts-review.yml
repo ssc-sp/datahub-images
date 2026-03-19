@@ -37,7 +37,7 @@ jobs:
           version: 2.91.0
 
       - name: Run Frogbot
-        uses: jfrog/frogbot@f33c6d196969c81ff143ec54254563f0f8258b8c #v2.29.4
+        uses: jfrog/frogbot@d72af9f0d44a7bd0250c4d0253a164a9a96e1202 # v2.31.1
         env:
           JF_ACCESS_TOKEN: "${{ steps.setup-jfrog-cli.outputs.oidc-token }}"
           JF_GIT_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
