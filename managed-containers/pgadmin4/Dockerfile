@@ -1,5 +1,5 @@
 # Pinned to specific image
-FROM dpage/pgadmin4:latest@sha256:10137f33be7ed61e47f56004493710cb5b80ba7fb0ca01758855e242f1f284a7
+FROM dpage/pgadmin4:latest@sha256:ff557f69d9808085dc3554f56c1b06a36ac8cddabe4485212920b9604261abdb
 
 LABEL org.opencontainers.image.description="pgAdmin4 for Postgres Database Web UI"
 LABEL org.opencontainers.image.source="https://github.com/ssc-sp/datahub-images"
