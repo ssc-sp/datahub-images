@@ -1,6 +1,6 @@
 # Pinned to the amd64 build of ubuntu:24.04 for reproducibility and to avoid multi-arch resolution.
 # Update digest via: docker buildx imagetools inspect ubuntu:24.04 | grep amd64
-FROM ubuntu:24.04@sha256:dc17125eaac86538c57da886e494a34489122fb6a3ebb6411153d742594c2ddc
+FROM ubuntu:24.04@sha256:cdb5fd928fced577cfecf12c8966e830fcdf42ee481fb0b91904eeddc2fe5eff
 
 LABEL org.opencontainers.image.description="ClamAV image used to antivirus scan files"
 LABEL org.opencontainers.image.source="https://github.com/fsdh-pfds/datahub-images"
