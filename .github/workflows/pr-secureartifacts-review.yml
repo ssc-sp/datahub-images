@@ -14,6 +14,7 @@ env:
 jobs:
   scan-pull-request:
     runs-on: ubuntu-latest
+    environment: frogbot
     permissions:
       id-token: write
       contents: read
