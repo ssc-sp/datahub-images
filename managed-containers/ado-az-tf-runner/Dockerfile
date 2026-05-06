@@ -1,5 +1,5 @@
 # renovate: datasource=docker depName=ubuntu versioning=ubuntu
-ARG UBUNTU_VERSION=24.04@sha256:6015f66923d7afbc53558d7ccffd325d43b4e249f41a6e93eef074c9505d2233
+ARG UBUNTU_VERSION=26.04@sha256:f3d28607ddd78734bb7f71f117f3c6706c666b8b76cbff7c9ff6e5718d46ff64
 FROM ubuntu:$UBUNTU_VERSION
 
 # Enable headless mode
