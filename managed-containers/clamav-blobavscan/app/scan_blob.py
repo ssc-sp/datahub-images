@@ -12,7 +12,7 @@ import pyclamd
 from azure.data.tables import TableServiceClient
 from azure.storage.blob import BlobServiceClient
 from azure.storage.queue import QueueClient
-from azure.identity.aio import DefaultAzureCredential
+from azure.identity import DefaultAzureCredential
 
 CHUNK_SIZE = 1024 * 1024 * 1024 * 1
 
@@ -20,6 +20,7 @@ CHUNK_SIZE = 1024 * 1024 * 1024 * 1
 def get_config():
     return {
         "STORAGE_ACCOUNT": os.getenv("STORAGE_ACCOUNT"),
+        "CLIENT_ID": os.getenv("CLIENT_ID"),
         "queue_name": os.getenv("queue_name") or "virus-scan",
         "quarantine_container_name": os.getenv("quarantine_container_name") or "datahub-quarantine",
         "datahub_container_name": os.getenv("container_name") or "datahub",
@@ -29,7 +30,7 @@ def get_config():
 
 
 config = get_config()
-credential = DefaultAzureCredential()
+credential = DefaultAzureCredential(managed_identity_client_id=config["CLIENT_ID"])
 
 queue_client = QueueClient(
     account_url="https://" + config["STORAGE_ACCOUNT"] + ".queue.core.windows.net/",
@@ -42,7 +43,7 @@ blob_service_client = BlobServiceClient(
 )
 
 table_service_client = TableServiceClient(
-    account_url="https://" + config["STORAGE_ACCOUNT"] + ".table.core.windows.net/", credential=credential
+    endpoint="https://" + config["STORAGE_ACCOUNT"] + ".table.core.windows.net/", credential=credential
 )
 
 
