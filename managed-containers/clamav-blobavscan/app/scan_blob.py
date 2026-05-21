@@ -12,13 +12,14 @@ import pyclamd
 from azure.data.tables import TableServiceClient
 from azure.storage.blob import BlobServiceClient
 from azure.storage.queue import QueueClient
+from azure.identity.aio import DefaultAzureCredential
 
 CHUNK_SIZE = 1024 * 1024 * 1024 * 1
 
 
 def get_config():
     return {
-        "storage_connection_string": os.getenv("storage_connection_string"),
+        "STORAGE_ACCOUNT": os.getenv("STORAGE_ACCOUNT"),
         "queue_name": os.getenv("queue_name") or "virus-scan",
         "quarantine_container_name": os.getenv("quarantine_container_name") or "datahub-quarantine",
         "datahub_container_name": os.getenv("container_name") or "datahub",
@@ -28,15 +29,21 @@ def get_config():
 
 
 config = get_config()
+credential = DefaultAzureCredential()
 
-queue_client = QueueClient.from_connection_string(
-    conn_str=config["storage_connection_string"],
+queue_client = QueueClient(
+    account_url="https://" + config["STORAGE_ACCOUNT"] + ".queue.core.windows.net/",
     queue_name=config["queue_name"],
+    credential=credential,
 )
 
-blob_service_client = BlobServiceClient.from_connection_string(config["storage_connection_string"])
+blob_service_client = BlobServiceClient(
+    account_url="https://" + config["STORAGE_ACCOUNT"] + ".blob.core.windows.net/", credential=credential
+)
 
-table_service_client = TableServiceClient.from_connection_string(config["storage_connection_string"])
+table_service_client = TableServiceClient(
+    account_url="https://" + config["STORAGE_ACCOUNT"] + ".table.core.windows.net/", credential=credential
+)
 
 
 def scan_blob(blob_client, blob_full_name, clamav_socket):
