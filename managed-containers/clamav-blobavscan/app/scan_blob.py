@@ -86,9 +86,13 @@ def scan_blob(blob_client, blob_full_name, clamav_socket):
                     else:
                         print("FSDH - chunk result " + status + virus)
 
-            if (threat_found > 0) or "clamavtest2025a" in blob_full_name:
+            if threat_found > 0:
                 print(f"FSDH - Infected blob chunk {chunk_index}: {blob_full_name}")
                 break
+            elif "clamavtest2025a" in blob_full_name:
+                threats.append("Testing...file name include clamavtest2025a")
+                break
+
             print(f"FSDH - blob chunk {chunk_index} is clean: {blob_full_name}")
 
         chunk_start += CHUNK_SIZE
@@ -101,12 +105,14 @@ def split_blob_path(blob_name_full: str) -> tuple[str, str, str]:
     parts = blob_name_full.strip("/").split("/")
     container = parts[3]
     blob_in_container = "/".join(parts[5:])
-    return container, blob_in_container, blob_name_full
+    return container, blob_in_container, "/" + container + "/" + blob_in_container, blob_name_full
 
 
 def process_message(message):
     json_data = json.loads(base64.b64decode(message.content))
-    blob_name_container, blob_name_in_container, blob_name_full = split_blob_path(json_data["subject"])
+    blob_name_container, blob_name_in_container, blob_name_with_container, blob_name_full = split_blob_path(
+        json_data["subject"]
+    )
     blob_url = json_data["data"]["blobUrl"]
 
     print("FSDH - processing blob: " + blob_name_full)
@@ -131,6 +137,8 @@ def process_message(message):
     scan_start_time = time.time()
     scan_result = scan_blob(blob_client, blob_name_full, clamav_socket)
     scan_time = time.time() - scan_start_time
+    more_blob_metadata = {"avscan": "ok"}
+
     if scan_result:
         print(f"FSDH - Infected blob {blob_name_full}")
 
@@ -138,7 +146,7 @@ def process_message(message):
             # Create marker in infected container
             infected_blob_client = blob_service_client.get_blob_client(
                 container=config["quarantine_container_name"],
-                blob=blob_name_in_container,
+                blob=blob_name_container + "/" + blob_name_in_container,
             )
 
             if infected_blob_client.exists():
@@ -156,8 +164,7 @@ def process_message(message):
 
             try:
                 entity = {
-                    "PartitionKey": blob_name_in_container,
-                    "RowKey": blob_client.get_blob_properties().last_modified,
+                    "fileName": blob_name_with_container,
                     "originalUrl": blob_client.url,
                     "quarrantineUrl": infected_blob_client.url,
                     "size_mb": round(blob_client.get_blob_properties().size / 1024 / 1024),
@@ -165,18 +172,19 @@ def process_message(message):
                     "scan_time_s": round(scan_time),
                     "copy_time_s": round(copy_time),
                 }
-                response = table_client.upsert_entity(entity)
-                print(f"FSDH - insert into table for {blob_name_in_container} with response {response}")
+                # response = table_client.upsert_entity(entity)
+                # print(f"FSDH - insert into table for {blob_name_in_container} with response {response}")
+                more_blob_metadata = {"avscan": json.dumps(entity)}
             except Exception as e:  # pylint: disable=broad-exception-caught
                 print(f"Error inserting to table: {e}")
 
         finally:
-            blob_client.delete_blob()
-    else:
-        more_blob_metadata = {"avscan": "ok"}
-        blob_metadata = blob_client.get_blob_properties().metadata
-        blob_metadata.update(more_blob_metadata)
-        blob_client.set_blob_metadata(metadata=blob_metadata)
+            if config["ENABLE_QUARANTINE"].lower() == "true":
+                blob_client.delete_blob()
+
+    blob_metadata = blob_client.get_blob_properties().metadata
+    blob_metadata.update(more_blob_metadata)
+    blob_client.set_blob_metadata(metadata=blob_metadata)
 
 
 def main():
