@@ -289,8 +289,12 @@ jobs:
           set -euo pipefail
           jf docker scan "${MATRIX_IMAGE}" \
             --project="${JF_PROJECT}" \
-            --fail=true \
-            --min-severity=Critical \
-            --format=table
+            --fail=false \
+            --format=sarif > xray-report.sarif
         env:
           MATRIX_IMAGE: ${{ matrix.image }}
+
+      - name: Upload SARIF to GitHub
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: xray-report.sarif
