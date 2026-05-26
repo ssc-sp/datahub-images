@@ -1,3 +1,35 @@
-projects:
-  - name: clamav-blobavscan
-    workingDirectory: managed-containers/clamav-blobavscan/app
+---
+- params:
+    git:
+      repoName: datahub-images
+      branches:
+        - main
+
+      branchNameTemplate: "frogbot-${IMPACTED_PACKAGE}-${BRANCH_NAME_HASH}"
+      commitMessageTemplate: "chore: upgrade ${IMPACTED_PACKAGE} to ${FIX_VERSION}"
+      pullRequestTitleTemplate: "chore: upgrade ${IMPACTED_PACKAGE} to ${FIX_VERSION}"
+
+      aggregateFixes: false
+
+    scan:
+      includeAllVulnerabilities: true
+      failOnSecurityIssues: true
+      fixableOnly: false
+
+      projects:
+        - workingDirs:
+            - managed-containers/clamav-blobavscan/app
+
+          pathExclusions:
+            - "*.git*"
+            - "*node_modules*"
+            - "*target*"
+            - "*venv*"
+            - "*.venv*"
+            - "*__pycache__*"
+            - "*test*"
+
+           pipRequirementsFile: requirements.txt
+
+    jfrogPlatform:
+      jfrogProjectKey: ssc-fsdh

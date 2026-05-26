@@ -2,29 +2,29 @@ name: Frogbot Repo Full Scan
 
 on:
   schedule:
-    - cron: "34 7 * * *" # 02:34 America/Montreal during EST (UTC-5)
+    - cron: "34 7 * * *" 
   workflow_dispatch:
 
 permissions: {}
 
 env:
   JF_URL: "https://artifacts-artefacts.devops.cloud-nuage.canada.ca"
-  JF_PROJECT: "ssc-fsdh"
 
 jobs:
   full-scan:
     runs-on: ubuntu-latest
+
     permissions:
       id-token: write
-      contents: read
-      pull-requests: write # Required for Frogbot to open automated fix PRs
+      contents: write
+      pull-requests: write
       security-events: write
 
     steps:
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          ref: "main"
+          ref: main
           fetch-depth: 0
           persist-credentials: false
 
@@ -42,7 +42,9 @@ jobs:
         env:
           JF_ACCESS_TOKEN: "${{ steps.setup-jfrog-cli.outputs.oidc-token }}"
           JF_GIT_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-          JF_GIT_BASE_BRANCH: "main"
-          JF_INCLUDE_ALL_VULNERABILITIES: "true"
-          JF_FAIL: "true"
-          JF_PULL_REQUEST_TITLE_TEMPLATE: "chore: Upgrade {IMPACTED_PACKAGE} to {FIX_VERSION}"
+          JF_GIT_PROVIDER: github
+          JF_GIT_API_ENDPOINT: https://api.github.com
+          JF_GIT_OWNER: "${{ github.repository_owner }}"
+          JF_GIT_REPO: "${{ github.event.repository.name }}"
+          JF_GIT_BASE_BRANCH: main
+          CI: "true"
