@@ -8,7 +8,6 @@
       branchNameTemplate: "frogbot-${IMPACTED_PACKAGE}-${BRANCH_NAME_HASH}"
       commitMessageTemplate: "chore: upgrade ${IMPACTED_PACKAGE} to ${FIX_VERSION}"
       pullRequestTitleTemplate: "chore: upgrade ${IMPACTED_PACKAGE} to ${FIX_VERSION}"
-
       aggregateFixes: false
 
     scan:
@@ -28,8 +27,6 @@
             - "*.venv*"
             - "*__pycache__*"
             - "*test*"
-
-           pipRequirementsFile: requirements.txt
 
     jfrogPlatform:
       jfrogProjectKey: ssc-fsdh
