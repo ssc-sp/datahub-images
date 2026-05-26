@@ -111,8 +111,11 @@ jobs:
             exit 0
           fi
 
-          # Build matrix include array; sanitize image tag to be Docker-safe
-          # Added a "name" field to safely distinguish matrix artifacts in GHA v4
+          short_sha="$(printf '%s' "$PR_HEAD_SHA" | cut -c1-12)"
+          image_tag="pr-${PR_NUMBER}-run-${GITHUB_RUN_NUMBER}-attempt-${GITHUB_RUN_ATTEMPT}-${short_sha}"
+
+          echo "Using image tag: $image_tag"
+
           matrix_json=$(
             while IFS= read -r dockerfile; do
               [ -z "$dockerfile" ] && continue
@@ -122,7 +125,7 @@ jobs:
                 | tr '[:upper:]' '[:lower:]' \
                 | sed -E 's/[^a-z0-9._-]+/-/g; s/^-+//; s/-+$//; s/-{2,}/-/g')"
               [ -z "$safe_base" ] && safe_base="image"
-              image_name="${safe_base}:latest"
+              image_name="${safe_base}:${image_tag}"
               printf '{"dockerfile":"%s","context":"%s","image":"%s","name":"%s"}\n' \
                 "$dockerfile" "$context" "$image_name" "$safe_base"
             done <<< "$dockerfiles_all" | jq -s '{include: .}'
@@ -136,6 +139,8 @@ jobs:
           echo "count=$count" >> "$GITHUB_OUTPUT"
         env:
           STEPS_CHANGED_OUTPUTS_CHANGED_FILES: ${{ steps.changed.outputs.changed_files }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
 
   # Job 1: Build the image and output it as an artifact
   build:
