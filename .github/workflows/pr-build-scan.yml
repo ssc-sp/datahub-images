@@ -9,6 +9,10 @@ on:
 
 permissions: read-all
 
+env:
+  JF_URL: "https://artifacts-artefacts.devops.cloud-nuage.canada.ca"
+  JF_PROJECT: "ssc-fsdh"
+
 jobs:
   prepare-matrix:
     runs-on: ubuntu-latest
@@ -108,7 +112,7 @@ jobs:
           fi
 
           # Build matrix include array; sanitize image tag to be Docker-safe
-          # Docker refname allowed: [a-z0-9._-] and must start with [a-z0-9]
+          # Added a "name" field to safely distinguish matrix artifacts in GHA v4
           matrix_json=$(
             while IFS= read -r dockerfile; do
               [ -z "$dockerfile" ] && continue
@@ -119,8 +123,8 @@ jobs:
                 | sed -E 's/[^a-z0-9._-]+/-/g; s/^-+//; s/-+$//; s/-{2,}/-/g')"
               [ -z "$safe_base" ] && safe_base="image"
               image_name="${safe_base}:latest"
-              printf '{"dockerfile":"%s","context":"%s","image":"%s"}\n' \
-                "$dockerfile" "$context" "$image_name"
+              printf '{"dockerfile":"%s","context":"%s","image":"%s","name":"%s"}\n' \
+                "$dockerfile" "$context" "$image_name" "$safe_base"
             done <<< "$dockerfiles_all" | jq -s '{include: .}'
           )
 
@@ -133,15 +137,16 @@ jobs:
         env:
           STEPS_CHANGED_OUTPUTS_CHANGED_FILES: ${{ steps.changed.outputs.changed_files }}
 
-  build-and-scan:
+  # Job 1: Build the image and output it as an artifact
+  build:
     permissions:
       id-token: write
+      contents: read
     needs: [prepare-matrix]
     if: ${{ fromJson(needs.prepare-matrix.outputs.count) > 0 }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      # max-parallel: 3
       matrix: ${{ fromJson(needs.prepare-matrix.outputs.matrix) }}
     steps:
       - name: Checkout
@@ -166,12 +171,9 @@ jobs:
         env:
           MATRIX_DOCKERFILE: ${{ matrix.dockerfile }}
 
-      - name: Setup GC Secure Artifacts and JFrog CLI
-        if: ${{ steps.check-jfrog.outputs.uses_jfrog == 'true' }}
+      - name: Setup JFrog CLI
         id: setup-jfrog-cli
         uses: jfrog/setup-jfrog-cli@1641575d87647fb969c0545f0b6a76873e328b7c # v5
-        env:
-          JF_URL: https://artifacts-artefacts.devops.cloud-nuage.canada.ca
         with:
           oidc-provider-name: github-oidc
 
@@ -188,9 +190,7 @@ jobs:
           set -euo pipefail
           file="${MATRIX_DOCKERFILE}"
 
-          # Reduce to the path segment starting at managed-containers/
           rel_path="$(printf '%s\n' "$file" | sed -E 's#^.*(managed-containers/.*)$#\1#')"
-          # Extract the immediate folder name under managed-containers/
           component="$(printf '%s\n' "$rel_path" | awk -F/ '{print $2}')"
 
           if printf '%s' "$component" | grep -q '[[:space:]]'; then
@@ -202,9 +202,6 @@ jobs:
 
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
-
-      - name: Setup Trivy
-        uses: aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514 # v0.2.6
 
       - name: Build image
         run: |
@@ -221,13 +218,72 @@ jobs:
           MATRIX_DOCKERFILE: ${{ matrix.dockerfile }}
           MATRIX_CONTEXT: ${{ matrix.context }}
 
-      - name: Scan (Trivy, CRITICAL only)
+      - name: Save Image to Tarball
+        run: |
+          docker save "${MATRIX_IMAGE}" -o image.tar
+        env:
+          MATRIX_IMAGE: ${{ matrix.image }}
+
+      - name: Upload Image Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: image-tar-${{ matrix.name }}
+          path: image.tar
+          retention-days: 1
+
+  trivy-scan:
+    permissions:
+      contents: read
+    needs: [build]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.prepare-matrix.outputs.matrix) }}
+    steps:
+      - name: Download Image Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: image-tar-${{ matrix.name }}
+
+      - name: Setup Trivy
+        uses: aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514 # v0.2.6
+
+      - name: Scan Image (Trivy)
+        run: |
+          trivy image --quiet --format table --exit-code 1 --severity CRITICAL --input image.tar
+
+  xray-scan:
+    permissions:
+      id-token: write
+      contents: read
+    needs: [build]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.prepare-matrix.outputs.matrix) }}
+    steps:
+      - name: Download Image Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: image-tar-${{ matrix.name }}
+
+      - name: Load Image to Docker Daemon
+        run: |
+          docker load -i image.tar
+
+      - name: Setup JFrog CLI
+        id: setup-jfrog-cli
+        uses: jfrog/setup-jfrog-cli@1641575d87647fb969c0545f0b6a76873e328b7c # v5
+        with:
+          oidc-provider-name: github-oidc
+
+      - name: Scan Image (JFrog Xray)
         run: |
           set -euo pipefail
-          img="${MATRIX_IMAGE}"
-          echo "Saving and scanning image: $img"
-          docker save "$img" -o image.tar
-          trivy image --quiet --format table --exit-code 1 --severity CRITICAL --input image.tar
-          rm -f image.tar
+          jf docker scan "${MATRIX_IMAGE}" \
+            --project="${JF_PROJECT}" \
+            --fail=true \
+            --min-severity=Critical \
+            --format=table
         env:
           MATRIX_IMAGE: ${{ matrix.image }}

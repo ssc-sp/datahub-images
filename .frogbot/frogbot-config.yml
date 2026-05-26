@@ -1,0 +1,3 @@
+projects:
+  - name: clamav-blobavscan
+    workingDirectory: managed-containers/clamav-blobavscan/app

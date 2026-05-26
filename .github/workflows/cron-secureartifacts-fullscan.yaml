@@ -1,4 +1,3 @@
----
 name: Frogbot Repo Full Scan
 
 on:
@@ -18,6 +17,7 @@ jobs:
     permissions:
       id-token: write
       contents: read
+      pull-requests: write # Required for Frogbot to open automated fix PRs
       security-events: write
 
     steps:
@@ -42,6 +42,7 @@ jobs:
         env:
           JF_ACCESS_TOKEN: "${{ steps.setup-jfrog-cli.outputs.oidc-token }}"
           JF_GIT_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+          JF_GIT_BASE_BRANCH: "main"
           JF_INCLUDE_ALL_VULNERABILITIES: "true"
           JF_FAIL: "true"
-          JF_PULL_REQUEST_TITLE_TEMPLATE: "chore: Upgrade ${IMPACTED_PACKAGE} to ${FIX_VERSION}"
+          JF_PULL_REQUEST_TITLE_TEMPLATE: "chore: Upgrade {IMPACTED_PACKAGE} to {FIX_VERSION}"
