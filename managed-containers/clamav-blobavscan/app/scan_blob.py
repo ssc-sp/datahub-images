@@ -172,15 +172,16 @@ def process_message(message):
 
             try:
                 entity = {
-                    "PartitionKey": blob_name_with_container.replace("/", "+++"),
-                    "RowKey": datetime.utcnow().isoformat() + "Z",
+                    "PartitionKey": blob_name_with_container.replace("/", "|||"),
+                    "RowKey": datetime.now().isoformat() + "Z",
                     "fileName": blob_name_with_container,
                     "threats": json.dumps(scan_result),
                 }
                 print(f"FSDH - inserting into table")
                 response = table_client.create_entity(entity=entity)
             except Exception as e:  # pylint: disable=broad-exception-caught
-                print(f"Error inserting to table: {e} with data")
+                print(f"Error inserting to table: {e}")
+                raise
 
         finally:
             more_blob_metadata = {"avscan": "fail", "avscan_reason": json.dumps(scan_result)}
@@ -212,6 +213,7 @@ def main():
                 queue_client.delete_message(msg)
             except Exception as e:  # pylint: disable=broad-exception-caught
                 print(f"FSDH - Error processing message: {e}")
+                queue_client.update_message(message=msg, visibility_timeout=3600 * 8)
 
 
 if __name__ == "__main__":
