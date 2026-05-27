@@ -262,6 +262,8 @@ jobs:
     permissions:
       id-token: write
       contents: read
+      security-events: write
+      actions: read
     needs: [prepare-matrix, build]
     if: ${{ fromJson(needs.prepare-matrix.outputs.count) > 0 }}
     runs-on: ubuntu-latest
@@ -269,6 +271,12 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJson(needs.prepare-matrix.outputs.matrix) }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
       - name: Download Image Artifact
         uses: actions/download-artifact@v4
         with:
@@ -287,14 +295,41 @@ jobs:
       - name: Scan Image (JFrog Xray)
         run: |
           set -euo pipefail
+
           jf docker scan "${MATRIX_IMAGE}" \
             --project="${JF_PROJECT}" \
             --fail=false \
             --format=sarif > xray-report.sarif
+
+          echo "Generated SARIF:"
+          jq '.version, (.runs // [] | length)' xray-report.sarif
         env:
           MATRIX_IMAGE: ${{ matrix.image }}
 
+      - name: Validate SARIF before upload
+        id: validate-sarif
+        run: |
+          set -euo pipefail
+
+          jq . xray-report.sarif > /dev/null
+
+          runs_count="$(jq '.runs // [] | length' xray-report.sarif)"
+          results_count="$(jq '[.runs[]?.results[]?] | length' xray-report.sarif)"
+
+          echo "SARIF runs: $runs_count"
+          echo "SARIF results: $results_count"
+
+          if [ "$runs_count" -eq 0 ]; then
+            echo "::notice title=Skipping SARIF upload::JFrog generated SARIF with zero runs. GitHub code scanning rejects empty runs arrays."
+            echo "upload=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "upload=true" >> "$GITHUB_OUTPUT"
+
       - name: Upload SARIF to GitHub
-        uses: github/codeql-action/upload-sarif@v3
+        if: ${{ steps.validate-sarif.outputs.upload == 'true' }}
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: xray-report.sarif
+          category: jfrog-xray-${{ matrix.name }}
