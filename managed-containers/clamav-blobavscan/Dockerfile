@@ -42,6 +42,9 @@ RUN apt-get update \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
+# Install Root CA
+RUN curl http://pki-icp.canada.ca/aia/GoC-GdC-Root-A.crt 2>/dev/null >> /etc/ssl/certs/ca-certificates.crt
+
 # Copy your app
 COPY app/ /app/
 WORKDIR /app
