@@ -1,7 +1,6 @@
-clamav:amd64=1.4.3+dfsg-0ubuntu0.24.04.1
-clamav-daemon:amd64=1.4.3+dfsg-0ubuntu0.24.04.1
-curl:amd64=8.5.0-2ubuntu10.6
-wget:amd64=1.21.4-1ubuntu4.1
-unzip:amd64=6.0-28ubuntu4.1
-python3-venv:amd64=3.12.3-0ubuntu2
-python3-pip:amd64=24.0+dfsg-1ubuntu1.2
+clamav
+clamav-daemon
+wget
+unzip
+python3-venv
+python3-pip
