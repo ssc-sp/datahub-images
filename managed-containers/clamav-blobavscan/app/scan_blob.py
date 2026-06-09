@@ -10,9 +10,9 @@ from datetime import datetime
 
 import pyclamd
 from azure.data.tables import TableServiceClient
+from azure.identity import DefaultAzureCredential
 from azure.storage.blob import BlobServiceClient
 from azure.storage.queue import QueueClient
-from azure.identity import DefaultAzureCredential
 
 CHUNK_SIZE = 1024 * 1024 * 1024 * 1
 
@@ -144,7 +144,6 @@ def process_message(message):
     scan_start_time = datetime.now()
     scan_result = scan_blob(blob_client, blob_name_full, clamav_socket)
     scan_end_time = datetime.now()
-    scan_time = (scan_end_time - scan_start_time).total_seconds()
     more_blob_metadata = {"avscan": "ok"}
 
     if scan_result:
@@ -161,11 +160,9 @@ def process_message(message):
                 print(f"FSDH - blob {blob_name_in_container} already exists in quarantine container, deleting")
                 infected_blob_client.delete_blob()
 
-            copy_time_start = datetime.now()
             if config["ENABLE_QUARANTINE"].lower() == "true":
                 print(f"FSDH - copying blob {blob_name_in_container} to quarantine container ")
                 infected_blob_client.start_copy_from_url(blob_client.url)
-            copy_time = (datetime.now() - copy_time_start).total_seconds()
 
             print(f"FSDH - insert into storage table for {blob_name_in_container}")
             table_client = table_service_client.get_table_client(table_name="infectedfiles")
@@ -177,8 +174,8 @@ def process_message(message):
                     "fileName": blob_name_with_container,
                     "threats": json.dumps(scan_result),
                 }
-                print(f"FSDH - inserting into table")
-                response = table_client.create_entity(entity=entity)
+                print("FSDH - inserting into table")
+                table_client.create_entity(entity=entity)
             except Exception as e:  # pylint: disable=broad-exception-caught
                 print(f"Error inserting to table: {e}")
                 raise
