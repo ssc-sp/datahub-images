@@ -96,7 +96,8 @@ def scan_blob(blob_client, blob_full_name, clamav_socket):
             if threat_found > 0:
                 print(f"FSDH - Infected blob chunk {chunk_index}: {blob_full_name}")
                 break
-            elif "clamavtest2025a" in blob_full_name:
+
+            if "clamavtest2025a" in blob_full_name:
                 threats.append("Testing...file name include clamavtest2025a")
                 break
 
