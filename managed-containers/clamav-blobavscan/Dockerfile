@@ -13,10 +13,13 @@ RUN apk add --no-cache --no-check-certificate ca-certificates curl openssl \
  && update-ca-certificates
 
 ENV VIRTUAL_ENV=/opt/venv
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PIP_NO_CACHE_DIR=1
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1
+ENV PIP_NO_COMPILE=1
 
 RUN python3 -m venv "$VIRTUAL_ENV"
-
-ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
 COPY app/requirements.txt /tmp/requirements.txt
 
