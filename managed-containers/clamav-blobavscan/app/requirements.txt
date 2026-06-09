@@ -2,5 +2,4 @@ azure-storage-queue==12.*
 azure-storage-blob==12.*
 azure-data-tables==12.*
 azure-identity==1.*
-azure-keyvault==4.*
 pyclamd==0.4.*
