@@ -4,9 +4,7 @@
       "version": "1.1.0",
       "resolved": "ghcr.io/devcontainers-community/npm-features/prettier@sha256:41aca434d43373d78b276d3cd89ecdce960e0b618ff0ee59f2ecee0810dbabe9",
       "integrity": "sha256:41aca434d43373d78b276d3cd89ecdce960e0b618ff0ee59f2ecee0810dbabe9",
-      "dependsOn": [
-        "ghcr.io/devcontainers/features/node"
-      ]
+      "dependsOn": ["ghcr.io/devcontainers/features/node"]
     },
     "ghcr.io/devcontainers-extra/features/jfrog-cli-npm:1": {
       "version": "1.0.10",
