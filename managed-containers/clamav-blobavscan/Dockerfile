@@ -47,13 +47,8 @@ ENV DataHub_ENVNAME=dev \
 
 COPY --from=builder /usr/local/share/ca-certificates/ /usr/local/share/ca-certificates/
 COPY --from=builder /etc/ssl/certs/ /etc/ssl/certs/
-COPY --from=builder /bin/bash /bin/bash
 
-RUN apk add --no-cache \
-    clamav \
-    clamav-daemon \
-    unzip \
-    wget
+RUN ["apk", "add", "--no-cache", "bash", "clamav", "clamav-daemon", "unzip", "wget"]
 
 RUN mkdir -p /app "$WORK_DIR" /var/lib/clamav /var/run/clamav /etc/clamav \
  && chown -R nonroot:nonroot \
