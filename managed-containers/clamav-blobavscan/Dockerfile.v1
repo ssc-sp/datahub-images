@@ -24,27 +24,6 @@ RUN pip install --no-cache-dir --upgrade pip \
 
 USER nonroot
 
-
-FROM artifacts-artefacts.devops.cloud-nuage.canada.ca/docker-chainguard-remote/ssc-spc.gc.ca/python:latest-dev AS runtime-packages
-
-USER root
-
-RUN mkdir -p /runtime \
- && apk add \
-    --no-cache \
-    --initdb \
-    --root /runtime \
-    --no-scripts \
-    bash \
-    clamav \
-    clamav-daemon \
-    unzip \
-    wget \
- && rm -rf /runtime/var/cache/apk/*
-
-
-FROM artifacts-artefacts.devops.cloud-nuage.canada.ca/docker-chainguard-remote/ssc-spc.gc.ca/python:latest AS final-base
-
 FROM artifacts-artefacts.devops.cloud-nuage.canada.ca/docker-chainguard-remote/ssc-spc.gc.ca/python:latest AS final
 
 LABEL org.opencontainers.image.description="ClamAV image used to antivirus scan files"
@@ -64,17 +43,16 @@ ENV DataHub_ENVNAME=dev \
     quarantine_container_name=datahub-quarantine \
     VIRTUAL_ENV=/opt/venv \
     WORK_DIR=/datahub-temp \
-    PATH="/opt/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-
-COPY --from=runtime-packages /runtime/ /
-
-COPY --from=final-base /etc/passwd /etc/passwd
-COPY --from=final-base /etc/group /etc/group
-
-SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+    PATH="/opt/venv/bin:$PATH"
 
 COPY --from=builder /usr/local/share/ca-certificates/ /usr/local/share/ca-certificates/
 COPY --from=builder /etc/ssl/certs/ /etc/ssl/certs/
+
+RUN apk add --no-cache \
+    clamav \
+    clamav-daemon \
+    unzip \
+    wget
 
 RUN mkdir -p /app "$WORK_DIR" /var/lib/clamav /var/run/clamav /etc/clamav \
  && chown -R nonroot:nonroot \
@@ -92,4 +70,4 @@ WORKDIR /app
 
 USER nonroot
 
-CMD ["/bin/bash", "/app/entrypoint.sh"]
+CMD ["bash", "/app/entrypoint.sh"]
