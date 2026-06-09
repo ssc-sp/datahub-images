@@ -24,7 +24,7 @@ RUN pip install --no-cache-dir --upgrade pip \
 
 USER nonroot
 
-FROM artifacts-artefacts.devops.cloud-nuage.canada.ca/docker-chainguard-remote/ssc-spc.gc.ca/python-dev:latest-dev AS final
+FROM artifacts-artefacts.devops.cloud-nuage.canada.ca/docker-chainguard-remote/ssc-spc.gc.ca/python:latest-dev AS final
 
 LABEL org.opencontainers.image.description="ClamAV image used to antivirus scan files"
 LABEL org.opencontainers.image.source="https://github.com/ssc-sp/datahub-images"
