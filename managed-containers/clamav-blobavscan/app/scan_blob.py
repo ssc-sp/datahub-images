@@ -108,7 +108,7 @@ def scan_blob(blob_client, blob_full_name, clamav_socket):
     return threats
 
 
-def split_blob_path(blob_name_full: str) -> tuple[str, str, str]:
+def split_blob_path(blob_name_full: str) -> tuple[str, str, str, str]:
     parts = blob_name_full.strip("/").split("/")
     container = parts[3]
     blob_in_container = "/".join(parts[5:])
