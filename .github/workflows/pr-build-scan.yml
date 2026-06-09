@@ -266,16 +266,32 @@ jobs:
         run: |
           set -euo pipefail
 
-          trivy image \
-            --quiet \
-            --format sarif \
-            --severity CRITICAL \
-            --exit-code 0 \
-            --output trivy-report.sarif \
+          ignore_file="${MATRIX_CONTEXT}/.trivyignore"
+
+          trivy_args=(
+            image
+            --quiet
+            --scanners vuln,secret
+            --format sarif
+            --severity CRITICAL
+            --exit-code 0
+            --output trivy-report.sarif
             --input image.tar
+          )
+
+          if [ -f "$ignore_file" ]; then
+            echo "Using Trivy ignore file: $ignore_file"
+            trivy_args+=(--ignorefile "$ignore_file")
+          else
+            echo "No Trivy ignore file found for this image."
+          fi
+
+          trivy "${trivy_args[@]}"
 
           echo "Generated SARIF:"
           jq '.version, (.runs // [] | length)' trivy-report.sarif
+        env:
+          MATRIX_CONTEXT: ${{ matrix.context }}
 
       - name: Validate Trivy SARIF before upload
         id: validate-sarif
@@ -309,12 +325,28 @@ jobs:
         run: |
           set -euo pipefail
 
-          trivy image \
-            --quiet \
-            --format table \
-            --exit-code 1 \
-            --severity CRITICAL \
+          ignore_file="${MATRIX_CONTEXT}/.trivyignore"
+
+          trivy_args=(
+            image
+            --quiet
+            --scanners vuln,secret
+            --format table
+            --exit-code 1
+            --severity CRITICAL
             --input image.tar
+          )
+
+          if [ -f "$ignore_file" ]; then
+            echo "Using Trivy ignore file: $ignore_file"
+            trivy_args+=(--ignorefile "$ignore_file")
+          else
+            echo "No Trivy ignore file found for this image."
+          fi
+
+          trivy "${trivy_args[@]}"
+        env:
+          MATRIX_CONTEXT: ${{ matrix.context }}
 
   xray-scan:
     permissions:
