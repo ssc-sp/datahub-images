@@ -1,4 +1,4 @@
-#FROM artifacts-artefacts.devops.cloud-nuage.canada.ca/docker-chainguard-remote/ssc-spc.gc.ca/python:latest-dev AS builder
+# FROM artifacts-artefacts.devops.cloud-nuage.canada.ca/docker-chainguard-remote/ssc-spc.gc.ca/python:latest-dev AS builder
 FROM cgr.dev/chainguard/python:latest-dev AS builder
 
 ARG GOC_ROOT_A_FINGERPRINT="FE:E0:9E:77:43:BF:D4:3E:D7:D4:D3:ED:50:6C:C7:9D:2D:90:70:FF:A9:29:91:16:87:D4:27:33:70:BE:A3:06"
@@ -6,6 +6,10 @@ ARG GOC_ROOT_A_URL="https://raw.githubusercontent.com/gccloudone-aurora-collab/g
 
 USER root
 
+# Required because this stage uses a pipe with openssl | cut
+SHELL ["/bin/ash", "-e", "-o", "pipefail", "-c"]
+
+# hadolint ignore=DL3018
 RUN apk add --no-cache --no-check-certificate ca-certificates curl openssl \
  && curl -fsSL --insecure "${GOC_ROOT_A_URL}" \
     -o /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt \
@@ -23,12 +27,12 @@ RUN python3 -m venv "$VIRTUAL_ENV"
 
 COPY app/requirements.txt /tmp/requirements.txt
 
-RUN pip install --no-cache-dir --upgrade pip \
- && pip install --no-cache-dir -r /tmp/requirements.txt
+RUN python3 -m pip install --no-cache-dir --requirement /tmp/requirements.txt
 
 USER nonroot
 
-#FROM artifacts-artefacts.devops.cloud-nuage.canada.ca/docker-chainguard-remote/ssc-spc.gc.ca/python:latest-dev AS runtime-packages
+
+# FROM artifacts-artefacts.devops.cloud-nuage.canada.ca/docker-chainguard-remote/ssc-spc.gc.ca/python:latest-dev AS runtime-packages
 FROM cgr.dev/chainguard/python:latest-dev AS runtime-packages
 
 USER root
@@ -36,6 +40,7 @@ USER root
 COPY --from=builder /usr/local/share/ca-certificates/ /usr/local/share/ca-certificates/
 COPY --from=builder /etc/ssl/certs/ /etc/ssl/certs/
 
+# hadolint ignore=DL3018
 RUN mkdir -p /runtime/etc/apk \
  && cp -r /etc/apk/keys /runtime/etc/apk/keys \
  && cp /etc/apk/repositories /runtime/etc/apk/repositories \
@@ -58,8 +63,14 @@ RUN mkdir -p /runtime/etc/apk \
     /runtime/var/run/clamav \
     /runtime/etc/clamav
 
-#FROM artifacts-artefacts.devops.cloud-nuage.canada.ca/docker-chainguard-remote/ssc-spc.gc.ca/python:latest AS final
-FROM cgr.dev/chainguard/python:latest AS final
+USER nonroot
+
+
+# FROM artifacts-artefacts.devops.cloud-nuage.canada.ca/docker-chainguard-remote/ssc-spc.gc.ca/python:latest AS final-base
+# hadolint ignore=DL3007
+FROM cgr.dev/chainguard/python:latest AS final-base
+
+FROM final-base AS final
 
 LABEL org.opencontainers.image.description="ClamAV image used to antivirus scan files"
 LABEL org.opencontainers.image.source="https://github.com/ssc-sp/datahub-images"
@@ -80,20 +91,17 @@ ENV DataHub_ENVNAME=dev \
     WORK_DIR=/datahub-temp \
     PATH="/opt/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
-# Copy dependeciess
+# Copy runtime dependencies
 COPY --from=runtime-packages /runtime/ /
 
-# Restore user groups
-COPY --from=cgr.dev/chainguard/python:latest /etc/passwd /etc/passwd
-COPY --from=cgr.dev/chainguard/python:latest /etc/group /etc/group
-
-# Now that bash is safely installed, we can enable pipefail
-SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+# Restore user and group files from the original final base image
+COPY --from=final-base /etc/passwd /etc/passwd
+COPY --from=final-base /etc/group /etc/group
 
 COPY --from=builder /usr/local/share/ca-certificates/ /usr/local/share/ca-certificates/
 COPY --from=builder /etc/ssl/certs/ /etc/ssl/certs/
 
-# Copy python app
+# Copy Python app
 COPY --from=builder --chown=nonroot:nonroot "$VIRTUAL_ENV" "$VIRTUAL_ENV"
 COPY --chown=nonroot:nonroot app/ /app/
 
@@ -101,4 +109,4 @@ WORKDIR /app
 
 USER nonroot
 
-CMD ["/bin/bash", "/app/entrypoint.sh"]
+CMD ["/bin/bash", "/app/entrypoint.sh"] 
