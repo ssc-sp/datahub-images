@@ -1,5 +1,5 @@
 FROM artifacts-artefacts.devops.cloud-nuage.canada.ca/docker-chainguard-remote/ssc-spc.gc.ca/python:latest-dev AS builder
-#FROM cgr.dev/chainguard/python:latest-dev AS builder
+# FROM cgr.dev/chainguard/python:latest-dev AS builder
 
 ARG GOC_ROOT_A_FINGERPRINT="FE:E0:9E:77:43:BF:D4:3E:D7:D4:D3:ED:50:6C:C7:9D:2D:90:70:FF:A9:29:91:16:87:D4:27:33:70:BE:A3:06"
 ARG GOC_ROOT_A_URL="https://raw.githubusercontent.com/gccloudone-aurora-collab/goc-root-cert-mirror/main/certs/GoC-GdC-Root-A.crt"
@@ -31,8 +31,9 @@ RUN python3 -m pip install --no-cache-dir --requirement /tmp/requirements.txt
 
 USER nonroot
 
+
 FROM artifacts-artefacts.devops.cloud-nuage.canada.ca/docker-chainguard-remote/ssc-spc.gc.ca/python:latest-dev AS runtime-packages
-#FROM cgr.dev/chainguard/python:latest-dev AS runtime-packages
+# FROM cgr.dev/chainguard/python:latest-dev AS runtime-packages
 
 USER root
 
@@ -54,13 +55,20 @@ RUN mkdir -p /runtime/etc/apk \
              /runtime/datahub-temp \
              /runtime/var/lib/clamav \
              /runtime/var/run/clamav \
+             /runtime/run/clamav \
+             /runtime/var/log/clamav \
              /runtime/etc/clamav \
  && chown -R 65532:65532 \
     /runtime/app \
     /runtime/datahub-temp \
     /runtime/var/lib/clamav \
     /runtime/var/run/clamav \
+    /runtime/run/clamav \
+    /runtime/var/log/clamav \
     /runtime/etc/clamav
+
+COPY clamd.conf /runtime/etc/clamav/clamd.conf
+COPY freshclam.conf /runtime/etc/clamav/freshclam.conf
 
 USER nonroot
 
@@ -107,4 +115,5 @@ WORKDIR /app
 
 USER nonroot
 
-CMD ["/bin/bash", "/app/entrypoint.sh"] 
+ENTRYPOINT []
+CMD ["/bin/bash", "/app/entrypoint.sh"]
