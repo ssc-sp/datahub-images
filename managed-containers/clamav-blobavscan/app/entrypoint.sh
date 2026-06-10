@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-touch "$0".start
+: > "${0}.start"
 
 freshclam --config-file=/etc/clamav/freshclam.conf --stdout
 
