@@ -9,6 +9,10 @@ on:
 
 permissions: read-all
 
+env:
+  JF_URL: "https://artifacts-artefacts.devops.cloud-nuage.canada.ca"
+  JF_PROJECT: "ssc-fsdh"
+
 jobs:
   prepare-matrix:
     runs-on: ubuntu-latest
@@ -107,8 +111,11 @@ jobs:
             exit 0
           fi
 
-          # Build matrix include array; sanitize image tag to be Docker-safe
-          # Docker refname allowed: [a-z0-9._-] and must start with [a-z0-9]
+          short_sha="$(printf '%s' "$PR_HEAD_SHA" | cut -c1-12)"
+          image_tag="pr-${PR_NUMBER}-run-${GITHUB_RUN_NUMBER}-attempt-${GITHUB_RUN_ATTEMPT}-${short_sha}"
+
+          echo "Using image tag: $image_tag"
+
           matrix_json=$(
             while IFS= read -r dockerfile; do
               [ -z "$dockerfile" ] && continue
@@ -118,9 +125,9 @@ jobs:
                 | tr '[:upper:]' '[:lower:]' \
                 | sed -E 's/[^a-z0-9._-]+/-/g; s/^-+//; s/-+$//; s/-{2,}/-/g')"
               [ -z "$safe_base" ] && safe_base="image"
-              image_name="${safe_base}:latest"
-              printf '{"dockerfile":"%s","context":"%s","image":"%s"}\n' \
-                "$dockerfile" "$context" "$image_name"
+              image_name="${safe_base}:${image_tag}"
+              printf '{"dockerfile":"%s","context":"%s","image":"%s","name":"%s"}\n' \
+                "$dockerfile" "$context" "$image_name" "$safe_base"
             done <<< "$dockerfiles_all" | jq -s '{include: .}'
           )
 
@@ -132,16 +139,19 @@ jobs:
           echo "count=$count" >> "$GITHUB_OUTPUT"
         env:
           STEPS_CHANGED_OUTPUTS_CHANGED_FILES: ${{ steps.changed.outputs.changed_files }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
 
-  build-and-scan:
+  # Job 1: Build the image and output it as an artifact
+  build:
     permissions:
       id-token: write
+      contents: read
     needs: [prepare-matrix]
     if: ${{ fromJson(needs.prepare-matrix.outputs.count) > 0 }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      # max-parallel: 3
       matrix: ${{ fromJson(needs.prepare-matrix.outputs.matrix) }}
     steps:
       - name: Checkout
@@ -166,18 +176,15 @@ jobs:
         env:
           MATRIX_DOCKERFILE: ${{ matrix.dockerfile }}
 
-      - name: Setup GC Secure Artifacts and JFrog CLI
-        if: ${{ steps.check-jfrog.outputs.uses_jfrog == 'true' }}
+      - name: Setup JFrog CLI
         id: setup-jfrog-cli
-        uses: jfrog/setup-jfrog-cli@86dacb6974c66cc99e7651e1205f6581aaddba9a # v4.10.0
-        env:
-          JF_URL: https://artifacts-artefacts.devops.cloud-nuage.canada.ca
+        uses: jfrog/setup-jfrog-cli@1641575d87647fb969c0545f0b6a76873e328b7c # v5
         with:
           oidc-provider-name: github-oidc
 
       - name: GC Secure Artifacts Docker login
         if: ${{ steps.check-jfrog.outputs.uses_jfrog == 'true' }}
-        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 #v3.7.0
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
         with:
           registry: https://artifacts-artefacts.devops.cloud-nuage.canada.ca
           username: ${{ steps.setup-jfrog-cli.outputs.oidc-user }}
@@ -188,9 +195,7 @@ jobs:
           set -euo pipefail
           file="${MATRIX_DOCKERFILE}"
 
-          # Reduce to the path segment starting at managed-containers/
           rel_path="$(printf '%s\n' "$file" | sed -E 's#^.*(managed-containers/.*)$#\1#')"
-          # Extract the immediate folder name under managed-containers/
           component="$(printf '%s\n' "$rel_path" | awk -F/ '{print $2}')"
 
           if printf '%s' "$component" | grep -q '[[:space:]]'; then
@@ -201,10 +206,7 @@ jobs:
           MATRIX_DOCKERFILE: ${{ matrix.dockerfile }}
 
       - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
-
-      - name: Setup Trivy
-        uses: aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514 # v0.2.5
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
 
       - name: Build image
         run: |
@@ -221,13 +223,203 @@ jobs:
           MATRIX_DOCKERFILE: ${{ matrix.dockerfile }}
           MATRIX_CONTEXT: ${{ matrix.context }}
 
-      - name: Scan (Trivy, CRITICAL only)
+      - name: Save Image to Tarball
         run: |
-          set -euo pipefail
-          img="${MATRIX_IMAGE}"
-          echo "Saving and scanning image: $img"
-          docker save "$img" -o image.tar
-          trivy image --quiet --format table --exit-code 1 --severity CRITICAL --input image.tar
-          rm -f image.tar
+          docker save "${MATRIX_IMAGE}" -o image.tar
         env:
           MATRIX_IMAGE: ${{ matrix.image }}
+
+      - name: Upload Image Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: image-tar-${{ matrix.name }}
+          path: image.tar
+          retention-days: 1
+
+  trivy-scan:
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    needs: [prepare-matrix, build]
+    if: ${{ fromJson(needs.prepare-matrix.outputs.count) > 0 }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.prepare-matrix.outputs.matrix) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Download Image Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: image-tar-${{ matrix.name }}
+
+      - name: Setup Trivy
+        uses: aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514 # v0.2.6
+
+      - name: Generate Trivy SARIF report
+        run: |
+          set -euo pipefail
+
+          ignore_file="${MATRIX_CONTEXT}/.trivyignore"
+
+          trivy_args=(
+            image
+            --quiet
+            --scanners vuln,secret
+            --format sarif
+            --severity CRITICAL
+            --exit-code 0
+            --output trivy-report.sarif
+            --input image.tar
+          )
+
+          if [ -f "$ignore_file" ]; then
+            echo "Using Trivy ignore file: $ignore_file"
+            trivy_args+=(--ignorefile "$ignore_file")
+          else
+            echo "No Trivy ignore file found for this image."
+          fi
+
+          trivy "${trivy_args[@]}"
+
+          echo "Generated SARIF:"
+          jq '.version, (.runs // [] | length)' trivy-report.sarif
+        env:
+          MATRIX_CONTEXT: ${{ matrix.context }}
+
+      - name: Validate Trivy SARIF before upload
+        id: validate-sarif
+        run: |
+          set -euo pipefail
+
+          jq . trivy-report.sarif > /dev/null
+
+          runs_count="$(jq '.runs // [] | length' trivy-report.sarif)"
+          results_count="$(jq '[.runs[]?.results[]?] | length' trivy-report.sarif)"
+
+          echo "SARIF runs: $runs_count"
+          echo "SARIF results: $results_count"
+
+          if [ "$runs_count" -eq 0 ]; then
+            echo "::notice title=Skipping SARIF upload::Trivy generated SARIF with zero runs. GitHub code scanning rejects empty runs arrays."
+            echo "upload=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "upload=true" >> "$GITHUB_OUTPUT"
+
+      - name: Upload Trivy SARIF to GitHub
+        if: ${{ steps.validate-sarif.outputs.upload == 'true' }}
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy-report.sarif
+          category: trivy-${{ matrix.name }}
+
+      - name: Enforce Trivy vulnerability gate
+        run: |
+          set -euo pipefail
+
+          ignore_file="${MATRIX_CONTEXT}/.trivyignore"
+
+          trivy_args=(
+            image
+            --quiet
+            --scanners vuln,secret
+            --format table
+            --exit-code 1
+            --severity CRITICAL
+            --input image.tar
+          )
+
+          if [ -f "$ignore_file" ]; then
+            echo "Using Trivy ignore file: $ignore_file"
+            trivy_args+=(--ignorefile "$ignore_file")
+          else
+            echo "No Trivy ignore file found for this image."
+          fi
+
+          trivy "${trivy_args[@]}"
+        env:
+          MATRIX_CONTEXT: ${{ matrix.context }}
+
+  xray-scan:
+    permissions:
+      id-token: write
+      contents: read
+      security-events: write
+      actions: read
+    needs: [prepare-matrix, build]
+    if: ${{ fromJson(needs.prepare-matrix.outputs.count) > 0 }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.prepare-matrix.outputs.matrix) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Download Image Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: image-tar-${{ matrix.name }}
+
+      - name: Load Image to Docker Daemon
+        run: |
+          docker load -i image.tar
+
+      - name: Setup JFrog CLI
+        id: setup-jfrog-cli
+        uses: jfrog/setup-jfrog-cli@1641575d87647fb969c0545f0b6a76873e328b7c # v5
+        with:
+          oidc-provider-name: github-oidc
+
+      - name: Scan Image (JFrog Xray)
+        run: |
+          set -euo pipefail
+
+          jf docker scan "${MATRIX_IMAGE}" \
+            --project="${JF_PROJECT}" \
+            --fail=false \
+            --format=sarif > xray-report.sarif
+
+          echo "Generated SARIF:"
+          jq '.version, (.runs // [] | length)' xray-report.sarif
+        env:
+          MATRIX_IMAGE: ${{ matrix.image }}
+
+      - name: Validate SARIF before upload
+        id: validate-sarif
+        run: |
+          set -euo pipefail
+
+          jq . xray-report.sarif > /dev/null
+
+          runs_count="$(jq '.runs // [] | length' xray-report.sarif)"
+          results_count="$(jq '[.runs[]?.results[]?] | length' xray-report.sarif)"
+
+          echo "SARIF runs: $runs_count"
+          echo "SARIF results: $results_count"
+
+          if [ "$runs_count" -eq 0 ]; then
+            echo "::notice title=Skipping SARIF upload::JFrog generated SARIF with zero runs. GitHub code scanning rejects empty runs arrays."
+            echo "upload=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "upload=true" >> "$GITHUB_OUTPUT"
+
+      - name: Upload SARIF to GitHub
+        if: ${{ steps.validate-sarif.outputs.upload == 'true' }}
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: xray-report.sarif
+          category: jfrog-xray-${{ matrix.name }}

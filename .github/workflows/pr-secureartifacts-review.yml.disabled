@@ -14,6 +14,7 @@ env:
 jobs:
   scan-pull-request:
     runs-on: ubuntu-latest
+    environment: frogbot
     permissions:
       id-token: write
       contents: read
@@ -28,7 +29,7 @@ jobs:
           persist-credentials: false
 
       - name: Setup JFrog CLI with OIDC
-        uses: jfrog/setup-jfrog-cli@86dacb6974c66cc99e7651e1205f6581aaddba9a # v4.10.0
+        uses: jfrog/setup-jfrog-cli@1641575d87647fb969c0545f0b6a76873e328b7c # v5
         id: setup-jfrog-cli
         env:
           JFROG_CLI_AVOID_NEW_VERSION_WARNING: "true"
@@ -37,7 +38,7 @@ jobs:
           version: 2.91.0
 
       - name: Run Frogbot
-        uses: jfrog/frogbot@d72af9f0d44a7bd0250c4d0253a164a9a96e1202 # v2.31.1
+        uses: jfrog/frogbot@3a1daa5a4f0a785b3ab48c5fdb6320b8d7d877cb # v2.32.2
         env:
           JF_ACCESS_TOKEN: "${{ steps.setup-jfrog-cli.outputs.oidc-token }}"
           JF_GIT_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
