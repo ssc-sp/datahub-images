@@ -1,0 +1,2 @@
+# False positive: Azure Tables SDK includes the local dev storage emulator key string. Finding is in azure.data.tables/_base_client.py.
+azure-storage-account-key

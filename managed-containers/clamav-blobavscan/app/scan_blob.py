@@ -6,10 +6,11 @@ import base64
 import json
 import os
 import tempfile
-import time
+from datetime import datetime
 
 import pyclamd
 from azure.data.tables import TableServiceClient
+from azure.identity import DefaultAzureCredential
 from azure.storage.blob import BlobServiceClient
 from azure.storage.queue import QueueClient
 
@@ -18,8 +19,10 @@ CHUNK_SIZE = 1024 * 1024 * 1024 * 1
 
 def get_config():
     return {
-        "storage_connection_string": os.getenv("storage_connection_string"),
+        "STORAGE_ACCOUNT": os.getenv("STORAGE_ACCOUNT"),
+        "CLIENT_ID": os.getenv("CLIENT_ID"),
         "queue_name": os.getenv("queue_name") or "virus-scan",
+        "result_queue_name": os.getenv("result_queue_name") or "clamav-scan-result",
         "quarantine_container_name": os.getenv("quarantine_container_name") or "datahub-quarantine",
         "datahub_container_name": os.getenv("container_name") or "datahub",
         "WORK_DIR": os.getenv("WORK_DIR") or "/datahub-temp",
@@ -28,15 +31,27 @@ def get_config():
 
 
 config = get_config()
+credential = DefaultAzureCredential(managed_identity_client_id=config["CLIENT_ID"])
 
-queue_client = QueueClient.from_connection_string(
-    conn_str=config["storage_connection_string"],
+queue_client = QueueClient(
+    account_url="https://" + config["STORAGE_ACCOUNT"] + ".queue.core.windows.net/",
     queue_name=config["queue_name"],
+    credential=credential,
 )
 
-blob_service_client = BlobServiceClient.from_connection_string(config["storage_connection_string"])
+result_queue_client = QueueClient(
+    account_url="https://" + config["STORAGE_ACCOUNT"] + ".queue.core.windows.net/",
+    queue_name=config["result_queue_name"],
+    credential=credential,
+)
 
-table_service_client = TableServiceClient.from_connection_string(config["storage_connection_string"])
+blob_service_client = BlobServiceClient(
+    account_url="https://" + config["STORAGE_ACCOUNT"] + ".blob.core.windows.net/", credential=credential
+)
+
+table_service_client = TableServiceClient(
+    endpoint="https://" + config["STORAGE_ACCOUNT"] + ".table.core.windows.net/", credential=credential
+)
 
 
 def scan_blob(blob_client, blob_full_name, clamav_socket):
@@ -78,9 +93,14 @@ def scan_blob(blob_client, blob_full_name, clamav_socket):
                     else:
                         print("FSDH - chunk result " + status + virus)
 
-            if (threat_found > 0) or "clamavtest2025a" in blob_full_name:
+            if threat_found > 0:
                 print(f"FSDH - Infected blob chunk {chunk_index}: {blob_full_name}")
                 break
+
+            if "clamavtest2025a" in blob_full_name:
+                threats.append("Testing...file name include clamavtest2025a")
+                break
+
             print(f"FSDH - blob chunk {chunk_index} is clean: {blob_full_name}")
 
         chunk_start += CHUNK_SIZE
@@ -89,16 +109,18 @@ def scan_blob(blob_client, blob_full_name, clamav_socket):
     return threats
 
 
-def split_blob_path(blob_name_full: str) -> tuple[str, str, str]:
+def split_blob_path(blob_name_full: str) -> tuple[str, str, str, str]:
     parts = blob_name_full.strip("/").split("/")
     container = parts[3]
     blob_in_container = "/".join(parts[5:])
-    return container, blob_in_container, blob_name_full
+    return container, blob_in_container, "/" + container + "/" + blob_in_container, blob_name_full
 
 
 def process_message(message):
     json_data = json.loads(base64.b64decode(message.content))
-    blob_name_container, blob_name_in_container, blob_name_full = split_blob_path(json_data["subject"])
+    blob_name_container, blob_name_in_container, blob_name_with_container, blob_name_full = split_blob_path(
+        json_data["subject"]
+    )
     blob_url = json_data["data"]["blobUrl"]
 
     print("FSDH - processing blob: " + blob_name_full)
@@ -120,9 +142,11 @@ def process_message(message):
 
     clamav_socket = pyclamd.ClamdUnixSocket()
 
-    scan_start_time = time.time()
+    scan_start_time = datetime.now()
     scan_result = scan_blob(blob_client, blob_name_full, clamav_socket)
-    scan_time = time.time() - scan_start_time
+    scan_end_time = datetime.now()
+    more_blob_metadata = {"avscan": "ok"}
+
     if scan_result:
         print(f"FSDH - Infected blob {blob_name_full}")
 
@@ -130,45 +154,52 @@ def process_message(message):
             # Create marker in infected container
             infected_blob_client = blob_service_client.get_blob_client(
                 container=config["quarantine_container_name"],
-                blob=blob_name_in_container,
+                blob=blob_name_container + "/" + blob_name_in_container,
             )
 
             if infected_blob_client.exists():
                 print(f"FSDH - blob {blob_name_in_container} already exists in quarantine container, deleting")
                 infected_blob_client.delete_blob()
 
-            copy_time_start = time.time()
             if config["ENABLE_QUARANTINE"].lower() == "true":
                 print(f"FSDH - copying blob {blob_name_in_container} to quarantine container ")
                 infected_blob_client.start_copy_from_url(blob_client.url)
-            copy_time = time.time() - copy_time_start
 
             print(f"FSDH - insert into storage table for {blob_name_in_container}")
             table_client = table_service_client.get_table_client(table_name="infectedfiles")
 
             try:
                 entity = {
-                    "PartitionKey": blob_name_in_container,
-                    "RowKey": blob_client.get_blob_properties().last_modified,
-                    "originalUrl": blob_client.url,
-                    "quarrantineUrl": infected_blob_client.url,
-                    "size_mb": round(blob_client.get_blob_properties().size / 1024 / 1024),
+                    "PartitionKey": blob_name_with_container.replace("/", "|||"),
+                    "RowKey": datetime.now().isoformat() + "Z",
+                    "fileName": blob_name_with_container,
                     "threats": json.dumps(scan_result),
-                    "scan_time_s": round(scan_time),
-                    "copy_time_s": round(copy_time),
                 }
-                response = table_client.upsert_entity(entity)
-                print(f"FSDH - insert into table for {blob_name_in_container} with response {response}")
+                print("FSDH - inserting into table")
+                table_client.create_entity(entity=entity)
             except Exception as e:  # pylint: disable=broad-exception-caught
                 print(f"Error inserting to table: {e}")
+                raise
 
         finally:
-            blob_client.delete_blob()
-    else:
-        more_blob_metadata = {"avscan": "ok"}
-        blob_metadata = blob_client.get_blob_properties().metadata
-        blob_metadata.update(more_blob_metadata)
-        blob_client.set_blob_metadata(metadata=blob_metadata)
+            more_blob_metadata = {"avscan": "fail", "avscan_reason": json.dumps(scan_result)}
+            if config["ENABLE_QUARANTINE"].lower() == "true":
+                blob_client.delete_blob()
+
+    blob_metadata = blob_client.get_blob_properties().metadata
+    blob_metadata.update(more_blob_metadata)
+    blob_client.set_blob_metadata(metadata=blob_metadata)
+
+    result_queue_client.send_message(
+        json.dumps(
+            {
+                "ScanStartTime": scan_start_time.isoformat(),
+                "ScanEndTime": scan_end_time.isoformat(),
+                "ScanError": json.dumps(scan_result) if scan_result else "",
+                "ScannedFile": blob_url,
+            }
+        )
+    )
 
 
 def main():
@@ -180,6 +211,7 @@ def main():
                 queue_client.delete_message(msg)
             except Exception as e:  # pylint: disable=broad-exception-caught
                 print(f"FSDH - Error processing message: {e}")
+                queue_client.update_message(message=msg, visibility_timeout=3600 * 8)
 
 
 if __name__ == "__main__":

@@ -1,11 +1,10 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
-touch "$0".start
-freshclam
-mkdir -p /var/run/clamav && chown clamav:clamav /var/run/clamav && (echo "TCPSocket 3310") >>/etc/clamav/clamd.conf
-clamd
+: >"${0}.start"
 
-# shellcheck disable=SC1091
-. /opt/venv/bin/activate
+freshclam --config-file=/etc/clamav/freshclam.conf --stdout
+
+clamd --config-file=/etc/clamav/clamd.conf
+
 python3 scan_blob.py
