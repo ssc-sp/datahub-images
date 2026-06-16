@@ -24,12 +24,10 @@ RUN apk add --no-cache --no-check-certificate ca-certificates curl openssl git \
 WORKDIR /src
 
 RUN mkdir repository \
-    && cd repository \
-    && git init \
-    && git remote add origin "${SOURCE_REPOSITORY}" \
-    && git fetch --depth 1 origin "${SOURCE_SHA}" \
-    && git checkout FETCH_HEAD \
-    && cd .. \
+    && git -C repository init \
+    && git -C repository remote add origin "${SOURCE_REPOSITORY}" \
+    && git -C repository fetch --depth 1 origin "${SOURCE_SHA}" \
+    && git -C repository checkout FETCH_HEAD \
     && test "$(git -C repository rev-parse HEAD)" = "${SOURCE_SHA}" \
     && chown -R nonroot:nonroot /src/repository
 
