@@ -10,14 +10,16 @@ ARG CACHE_BUSTER=1
 
 USER root
 
+SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
+
 # hadolint ignore=DL3018
 RUN apk add --no-cache --no-check-certificate ca-certificates curl openssl git \
  && curl -fsSL --insecure "${GOC_ROOT_A_URL}" \
     -o /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt \
  && test "$(openssl x509 -in /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt -noout -sha256 -fingerprint | cut -d= -f2)" = "${GOC_ROOT_A_FINGERPRINT}" \
- && update-ca-certificates
-
-RUN mkdir -p /app && chown nonroot:nonroot /app
+ && update-ca-certificates \
+ && mkdir -p /app \
+ && chown nonroot:nonroot /app
 
 WORKDIR /src
 
@@ -32,9 +34,8 @@ USER nonroot
 
 WORKDIR /src/repository/InviterService
 
-RUN dotnet restore "InviterService.csproj"
-
-RUN dotnet publish "InviterService.csproj" \
+RUN dotnet restore "InviterService.csproj" \
+ && dotnet publish "InviterService.csproj" \
     --configuration "${BUILD_CONFIGURATION}" \
     --no-restore \
     --output /app/publish \
