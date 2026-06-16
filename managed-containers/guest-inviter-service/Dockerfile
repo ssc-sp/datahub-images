@@ -10,6 +10,7 @@ ARG CACHE_BUSTER=1
 
 USER root
 
+# hadolint ignore=DL3018
 RUN apk add --no-cache --no-check-certificate ca-certificates curl openssl git \
  && curl -fsSL --insecure "${GOC_ROOT_A_URL}" \
     -o /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt \
@@ -46,7 +47,7 @@ LABEL org.opencontainers.image.source="https://github.com/ssc-sp/datahub-images"
       org.opencontainers.image.title="Guest Inviter Service" \
       org.opencontainers.image.description="API backend for FSDH guest invitations" \
       org.opencontainers.image.authors="SSC Science Program" \
-      org.opencontainers.image.vendor="GC Securre Artifacts | Artéfacts sécurisés GC https://artifacts-artefacts.devops.cloud-nuage.canada.ca/"
+      org.opencontainers.image.vendor="GC Secure Artifacts | Artéfacts sécurisés GC https://artifacts-artefacts.devops.cloud-nuage.canada.ca/"
 
 WORKDIR /app
 
