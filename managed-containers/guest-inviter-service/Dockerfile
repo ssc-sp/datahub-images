@@ -1,11 +1,10 @@
-FROM cgr.dev/chainguard/dotnet-sdk:latest-dev AS builder
+FROM artifacts-artefacts.devops.cloud-nuage.canada.ca/docker-chainguard-remote/ssc-spc.gc.ca/dotnet-sdk:v10-dev@sha256:ac8f4a621726c4f9a6655f9e8d95641d97a0c9ae8755d485db42e84f14ba1bc8 AS builder
 
-ARG GOC_ROOT_A_FINGERPRINT="FE:E0:9E:77:43:BF:D4:3E:D7:D4:D3:ED:50:6C:C7:9D:2D:90:70:FF:A9:29:91:16:87:D4:27:33:70:BE:A3:06"
-ARG GOC_ROOT_A_URL="https://raw.githubusercontent.com/gccloudone-aurora-collab/goc-root-cert-mirror/main/certs/GoC-GdC-Root-A.crt"
-
-ARG SOURCE_REPOSITORY="https://github.com/ssc-sp/guest-inviter-service.git"
-ARG SOURCE_REF="main"
-ARG BUILD_CONFIGURATION="Release"
+ARG GOC_ROOT_A_FINGERPRINT="FE:E0:9E:77:43:BF:D4:3E:D7:D4:D3:ED:50:6C:C7:9D:2D:90:70:FF:A9:29:91:16:87:D4:27:33:70:BE:A3:06" \
+    GOC_ROOT_A_URL="https://raw.githubusercontent.com/gccloudone-aurora-collab/goc-root-cert-mirror/main/certs/GoC-GdC-Root-A.crt" \
+    SOURCE_REPOSITORY="https://github.com/ssc-sp/guest-inviter-service.git" \
+    SOURCE_REF="main" \
+    BUILD_CONFIGURATION="Release"
 
 ARG CACHE_BUSTER=1
 
@@ -28,25 +27,26 @@ RUN git clone \
         repository \
     && chown -R nonroot:nonroot /src/repository
 
-# 4. Switch to nonroot for the actual .NET build
 USER nonroot
 
 WORKDIR /src/repository/InviterService
 
 RUN dotnet restore "InviterService.csproj"
 
-# 5. This will now work because nonroot owns /app
 RUN dotnet publish "InviterService.csproj" \
     --configuration "${BUILD_CONFIGURATION}" \
     --no-restore \
     --output /app/publish \
     /p:UseAppHost=false
 
-FROM cgr.dev/chainguard/aspnet-runtime:latest AS final
+FROM artifacts-artefacts.devops.cloud-nuage.canada.ca/docker-chainguard-remote/ssc-spc.gc.ca/aspnet-runtime:v10@sha256:421854898882c5f0e954f5e57107411965b5bb1db6fefced95f3b0138b4bd6b2 AS final
 
-LABEL org.opencontainers.image.description="Guest Inviter Service"
-LABEL org.opencontainers.image.source="https://github.com/ssc-sp/datahub-images"
-LABEL org.opencontainers.image.url="https://github.com/ssc-sp/datahub-images/blob/main/managed-containers/guest-inviter-service/README.md"
+LABEL org.opencontainers.image.source="https://github.com/ssc-sp/datahub-images" \
+      org.opencontainers.image.url="https://github.com/ssc-sp/datahub-images/blob/main/managed-containers/guest-inviter-service/README.md" \
+      org.opencontainers.image.title="Guest Inviter Service" \
+      org.opencontainers.image.description="API backend for FSDH guest invitations" \
+      org.opencontainers.image.authors="SSC Science Program" \
+      org.opencontainers.image.vendor="GC Securre Artifacts | Artéfacts sécurisés GC https://artifacts-artefacts.devops.cloud-nuage.canada.ca/"
 
 WORKDIR /app
 
