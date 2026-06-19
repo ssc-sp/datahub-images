@@ -29,7 +29,7 @@ jobs:
           persist-credentials: false
 
       - name: Setup JFrog CLI with OIDC
-        uses: jfrog/setup-jfrog-cli@1641575d87647fb969c0545f0b6a76873e328b7c # v5
+        uses: jfrog/setup-jfrog-cli@deda456d982fc5e9a7a020b63eb0d2968aedd33e # v5
         id: setup-jfrog-cli
         env:
           JFROG_CLI_AVOID_NEW_VERSION_WARNING: "true"
