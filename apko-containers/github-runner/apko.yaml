@@ -1,0 +1,70 @@
+---
+# apko.yaml
+contents:
+  repositories:
+    - https://packages.wolfi.dev/os
+    - "@local ./packages"
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+
+  packages:
+    # 1. Base OS layout
+    - wolfi-baselayout
+    - ca-certificates-bundle
+    
+    # 2. Your API Script Dependencies (Control Plane)
+    - bash
+    - curl
+    - jq
+    
+    # 3. .NET Runner Dependencies (Data Plane)
+    - icu
+    - openssl
+    - krb5
+    - zlib
+    - libgcc
+    - libstdc++
+    
+    # 4. Standard tools expected by GitHub Actions
+    - tar
+    - unzip
+    - sudo
+    - git
+    
+    # 5. Your Addon Packages (Replacing addon_packages.list)
+    - wget
+    - powershell
+    - terraform   # Note: Wolfi also has 'opentofu' if preferred
+    - azure-cli
+    - gh
+    - nodejs
+    - python-3
+    - py3-pip
+
+    # 6. Your locally built package (contains entrypoint.sh and the downloaded runner binaries)
+    - github-runner-app@local
+
+accounts:
+  groups:
+    - groupname: runner
+      gid: 1001
+    - groupname: docker
+      gid: 123
+  users:
+    - username: runner
+      uid: 1001
+      gid: 1001
+  run-as: 1001
+
+environment:
+  HOME: /home/runner
+  DEBIAN_FRONTEND: noninteractive
+  RUNNER_MANUALLY_TRAP_SIG: "1"
+  ACTIONS_RUNNER_PRINT_LOG_TO_STDOUT: "1"
+  # Optional: spoof the OS variable so Microsoft scripts think it's Ubuntu if they check
+  ImageOS: ubuntu24
+
+workdir: /home/runner
+
+entrypoint:
+  command: /usr/bin/entrypoint.sh

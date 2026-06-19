@@ -1,0 +1,29 @@
+---
+# melange.yaml
+package:
+  name: github-runner-app
+  version: 2.327.1
+  epoch: 0
+  description: "GitHub Actions Runner binaries and entrypoint script"
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - curl
+      - tar
+
+pipeline:
+  - runs: |
+      # 1. Create the installation directories
+      mkdir -p "${{targets.destdir}}/home/runner"
+      mkdir -p "${{targets.destdir}}/usr/bin"
+      
+      # 2. Download and extract the GitHub Runner binaries
+      curl -fsSL "https://github.com/actions/runner/releases/download/v${{package.version}}/actions-runner-linux-x64-${{package.version}}.tar.gz" -o runner.tar.gz
+      tar xzf runner.tar.gz -C "${{targets.destdir}}/home/runner"
+      
+      # 3. Copy your entrypoint script
+      install -Dm755 entrypoint.sh "${{targets.destdir}}/usr/bin/entrypoint.sh"
