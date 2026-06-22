@@ -1,13 +1,13 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:best-practices"],
+  "extends": [
+    "config:best-practices"
+  ],
   "packageRules": [
     {
-      "description": "Split dockerfile updates per Dockerfile path",
-      "matchManagers": ["dockerfile"],
-      "matchDatasources": ["docker"],
-      "additionalBranchPrefix": "{{replace '/' '-' packageFileDir}}-",
-      "commitMessageSuffix": "({{packageFileDir}})"
+      "description": "Automatically group all dependencies by their parent folder",
+      "matchPaths": ["managed-containers/**"],
+      "groupName": "{{packageFileDir}} dependencies"
     }
   ]
 }
