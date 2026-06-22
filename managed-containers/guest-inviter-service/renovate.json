@@ -2,8 +2,8 @@
   "customManagers": [
     {
       "customType": "regex",
-      "fileMatch": [
-        "^managed-containers/guest-updater-service/Dockerfile$"
+      "managerFilePatterns": [
+        "/^managed-containers/guest-updater-service/Dockerfile$/"
       ],
       "matchStrings": [
         "SOURCE_REPOSITORY=\"(?<depName>https://[^\"]+)\"\\s*\\\\\\s*SOURCE_REF=\"(?<currentValue>[^\"]+)\"\\s*\\\\\\s*SOURCE_SHA=\"(?<currentDigest>[a-f0-9]{40})\""
