@@ -1,14 +1,13 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:best-practices"
+    "config:best-practices",
+    "local>ssc-sp/datahub-images//managed-containers/guest-inviter-service/renovate.json"
   ],
   "packageRules": [
     {
       "description": "Automatically group all dependencies by their parent folder",
-      "matchFileNames": [
-        "managed-containers/**"
-      ],
+      "matchFileNames": ["managed-containers/**"],
       "groupName": "{{packageFileDir}} dependencies"
     }
   ]
