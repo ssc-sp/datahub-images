@@ -7,9 +7,7 @@
   "packageRules": [
     {
       "description": "Automatically group all dependencies by their parent folder",
-      "matchFileNames": [
-        "managed-containers/**"
-      ],
+      "matchFileNames": ["managed-containers/**"],
       "groupName": "{{packageFileDir}} dependencies"
     }
   ]
