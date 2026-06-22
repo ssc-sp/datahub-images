@@ -1,7 +1,8 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:best-practices"
+    "config:best-practices",
+    "local>ssc-sp/datahub-images//managed-containers/guest-inviter-service/renovate.json"
   ],
   "packageRules": [
     {
