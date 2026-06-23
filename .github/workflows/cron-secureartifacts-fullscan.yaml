@@ -2,7 +2,7 @@ name: Frogbot Repo Full Scan
 
 on:
   schedule:
-    - cron: "34 7 * * *" 
+    - cron: "34 7 * * *"
   workflow_dispatch:
 
 permissions: {}
