@@ -35,8 +35,6 @@ LABEL org.opencontainers.image.description="ADO Linux (ubuntu) Self‑Hosted Run
 LABEL org.opencontainers.image.source="https://github.com/fsdh-pfds/datahub-images"
 LABEL org.opencontainers.image.url="https://github.com/fsdh-pfds/datahub-images/blob/main/managed-containers/ado-az-tf-pwsh-runner/README.md"
 
-ARG SNAPSHOT_ID=20250725T181600Z
-
 # Enable headless mode
 ENV DEBIAN_FRONTEND=noninteractive \
     RUNNER_MANUALLY_TRAP_SIG=1 \
@@ -51,10 +49,6 @@ COPY addon_packages.list /tmp/addon_packages.list
 RUN apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates \
  && rm -rf /var/lib/apt/lists/* 
-
-# apt-get snapshot id
-RUN echo "APT::Snapshot \"${SNAPSHOT_ID}\";" \
-     > /etc/apt/apt.conf.d/50snapshot
 
 # Install snapshotted baseline packages
 RUN apt-get update && \
