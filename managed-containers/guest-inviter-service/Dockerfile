@@ -3,8 +3,8 @@ FROM artifacts-artefacts.devops.cloud-nuage.canada.ca/docker-chainguard-remote/s
 ARG GOC_ROOT_A_FINGERPRINT="FE:E0:9E:77:43:BF:D4:3E:D7:D4:D3:ED:50:6C:C7:9D:2D:90:70:FF:A9:29:91:16:87:D4:27:33:70:BE:A3:06" \
     GOC_ROOT_A_URL="https://raw.githubusercontent.com/gccloudone-aurora-collab/goc-root-cert-mirror/main/certs/GoC-GdC-Root-A.crt" \
     SOURCE_REPOSITORY="https://github.com/ssc-sp/guest-inviter-service.git" \
-    SOURCE_SHA="37f7845cf6c9f9003321b547648598217f8bb637" \
     SOURCE_REF="main" \
+    SOURCE_SHA="37f7845cf6c9f9003321b547648598217f8bb637" \
     BUILD_CONFIGURATION="Release"
 
 ARG CACHE_BUSTER=1
