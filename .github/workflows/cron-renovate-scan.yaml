@@ -53,6 +53,7 @@ jobs:
           configurationFile: renovate.json
           token: ${{ steps.create_token.outputs.token }}
         env:
+          LOG_LEVEL: debug
           RENOVATE_REPOSITORIES: ${{ github.repository }}
           RENOVATE_HOST_RULES: >-
             [{
