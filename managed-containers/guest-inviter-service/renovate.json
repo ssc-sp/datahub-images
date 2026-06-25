@@ -2,14 +2,14 @@
   "customManagers": [
     {
       "customType": "regex",
+      "description": "Update guest-inviter-service source SHA from main",
       "managerFilePatterns": [
-        "/^managed-containers/guest-updater-service/Dockerfile$/"
+        "/^managed-containers/guest-inviter-service/Dockerfile$/"
       ],
       "matchStrings": [
-        "SOURCE_REPOSITORY=\"(?<depName>https://[^\"]+)\"\\s*\\\\\\s*SOURCE_REF=\"(?<currentValue>[^\"]+)\"\\s*\\\\\\s*SOURCE_SHA=\"(?<currentDigest>[a-f0-9]{40})\""
+        "SOURCE_REPOSITORY=\"(?<packageName>https://[^\"]+)\"\\s*\\\\\\s*SOURCE_REF=\"(?<currentValue>[^\"]+)\"\\s*\\\\\\s*SOURCE_SHA=\"(?<currentDigest>[a-f0-9]{40})\""
       ],
-      "datasourceTemplate": "git-refs",
-      "versioningTemplate": "git"
+      "datasourceTemplate": "git-refs"
     }
   ]
 }
