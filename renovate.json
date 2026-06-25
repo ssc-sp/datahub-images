@@ -6,9 +6,10 @@
   ],
   "packageRules": [
     {
-      "description": "Automatically group all dependencies by their parent folder",
+      "description": "Group managed-container dependencies by container folder",
       "matchFileNames": ["managed-containers/**"],
-      "groupName": "{{packageFileDir}} dependencies"
+      "groupName": "{{ lookup (split packageFileDir '/') 1 }} dependencies",
+      "groupSingleUpdates": true
     }
   ]
 }
