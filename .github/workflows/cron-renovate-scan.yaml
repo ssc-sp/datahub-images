@@ -2,8 +2,8 @@ name: Renovate Update Scan
 
 on:
   schedule:
-    - cron: '0 * * * *'
-  workflow_dispatch: 
+    - cron: "0 * * * *"
+  workflow_dispatch:
 
 permissions: {}
 
@@ -17,15 +17,14 @@ env:
 jobs:
   renovate:
     runs-on: ubuntu-latest
-    
+
     environment: renovate
-    
+
     permissions:
       id-token: write
       contents: read
 
     steps:
-
       - name: Create App token
         id: create_token
         uses: ssc-sp/.github/.github/actions/create-app-token@main
@@ -43,7 +42,7 @@ jobs:
         id: setup-jfrog
         uses: jfrog/setup-jfrog-cli@1641575d87647fb969c0545f0b6a76873e328b7c # v5.0.0
         env:
-          JF_URL: ${{ env.JF_URL }} 
+          JF_URL: ${{ env.JF_URL }}
         with:
           oidc-provider-name: github-oidc
           version: 2.91.0
