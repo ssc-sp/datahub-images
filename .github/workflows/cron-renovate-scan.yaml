@@ -54,5 +54,10 @@ jobs:
           token: ${{ steps.create_token.outputs.token }}
         env:
           RENOVATE_REPOSITORIES: ${{ github.repository }}
-          JFROG_USER: ${{ steps.setup-jfrog.outputs.oidc-user }}
-          JFROG_ACCESS_TOKEN: ${{ steps.setup-jfrog.outputs.oidc-token }}
+          RENOVATE_HOST_RULES: >-
+            [{
+              "hostType": "docker",
+              "matchHost": "artifacts-artefacts.devops.cloud-nuage.canada.ca",
+              "username": ${{ toJSON(steps.setup-jfrog.outputs.oidc-user) }},
+              "password": ${{ toJSON(steps.setup-jfrog.outputs.oidc-token) }}
+            }]
