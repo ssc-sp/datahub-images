@@ -54,4 +54,5 @@ jobs:
           token: ${{ steps.create_token.outputs.token }}
         env:
           RENOVATE_REPOSITORIES: ${{ github.repository }}
+          JFROG_USER: ${{ steps.setup-jfrog.outputs.oidc-user }}
           JFROG_ACCESS_TOKEN: ${{ steps.setup-jfrog.outputs.oidc-token }}

@@ -7,7 +7,9 @@
   "hostRules": [
     {
       "matchHost": "artifacts-artefacts.devops.cloud-nuage.canada.ca",
-      "token": "{{ env.JFROG_ACCESS_TOKEN }}"
+      "hostType": "docker",
+      "username": "{{ env.JFROG_USER }}",
+      "password": "{{ env.JFROG_ACCESS_TOKEN }}"
     }
   ],
   "packageRules": [
