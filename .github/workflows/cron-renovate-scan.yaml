@@ -54,10 +54,24 @@ jobs:
           token: ${{ steps.create_token.outputs.token }}
         env:
           RENOVATE_REPOSITORIES: ${{ github.repository }}
+          RENOVATE_PACKAGE_RULES: >-
+            [
+              {
+                "matchPackageNames": ["aquasecurity/setup-trivy", "aquasecurity/trivy-action"],
+                "datasourceTemplate": "github-releases"
+              }
+            ]
           RENOVATE_HOST_RULES: >-
-            [{
-              "hostType": "docker",
-              "matchHost": "artifacts-artefacts.devops.cloud-nuage.canada.ca",
-              "username": ${{ toJSON(steps.setup-jfrog.outputs.oidc-user) }},
-              "password": ${{ toJSON(steps.setup-jfrog.outputs.oidc-token) }}
-            }]
+            [
+              {
+                "hostType": "docker",
+                "matchHost": "artifacts-artefacts.devops.cloud-nuage.canada.ca",
+                "username": ${{ toJSON(steps.setup-jfrog.outputs.oidc-user) }},
+                "password": ${{ toJSON(steps.setup-jfrog.outputs.oidc-token) }}
+              },
+              {
+                "matchHost": "https://api.github.com/repos/aquasecurity/",
+                "token": ""
+              }
+            ]
+            
