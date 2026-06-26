@@ -43,7 +43,7 @@ RUN dotnet restore "InviterService.csproj" \
         --output /app/publish \
         /p:UseAppHost=false
 
-FROM artifacts-artefacts.devops.cloud-nuage.canada.ca/docker-chainguard-remote/ssc-spc.gc.ca/aspnet-runtime:v10@sha256:a58bd56cfa6b084c07ada3f014473166e2621ae9012de0f620b5b5738f202e3e AS final
+FROM artifacts-artefacts.devops.cloud-nuage.canada.ca/docker-chainguard-remote/ssc-spc.gc.ca/aspnet-runtime:v10@sha256:07064feb3fb36cbdd100f177b0719a709af7015f19d9bd12fdc57701ab797b88 AS final
 
 LABEL org.opencontainers.image.source="https://github.com/ssc-sp/datahub-images" \
     org.opencontainers.image.url="https://github.com/ssc-sp/datahub-images/blob/main/managed-containers/guest-inviter-service/README.md" \
