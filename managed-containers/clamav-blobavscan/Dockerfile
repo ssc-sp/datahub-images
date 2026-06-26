@@ -73,9 +73,12 @@ FROM artifacts-artefacts.devops.cloud-nuage.canada.ca/docker-chainguard-remote/s
 
 FROM final-base AS final
 
-LABEL org.opencontainers.image.description="ClamAV image used to antivirus scan files"
-LABEL org.opencontainers.image.source="https://github.com/ssc-sp/datahub-images"
-LABEL org.opencontainers.image.url="https://github.com/ssc-sp/datahub-images/blob/main/managed-containers/clamav-blobavscan/README.md"
+LABEL org.opencontainers.image.source="https://github.com/ssc-sp/datahub-images" \
+   org.opencontainers.image.url="https://github.com/ssc-sp/datahub-images/blob/main/managed-containers/clamav-blobavscan/README.md" \
+   org.opencontainers.image.vendor="GC Secure Artifacts | Artéfacts sécurisés GC https://artifacts-artefacts.devops.cloud-nuage.canada.ca/" \
+   org.opencontainers.image.title="ClamAV Blob Scanner" \
+   org.opencontainers.image.description="ClamAV image used to antivirus scan files" \
+   org.opencontainers.image.authors="SSC Science Program" 
 
 USER root
 
