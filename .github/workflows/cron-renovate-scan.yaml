@@ -27,7 +27,7 @@ jobs:
     steps:
       - name: Create App token
         id: create_token
-        uses: ssc-sp/.github/.github/actions/create-app-token@main
+        uses: ssc-sp/.github/.github/actions/create-app-token@bb74bd86095c3a984f85033f5d91c53b20218969 #main
         with:
           app-id: ${{ vars.IMAGES_RENOVATE_APP_ID }}
           private-key: ${{ secrets.IMAGES_RENOVATE_APP_KEY }}
@@ -37,6 +37,7 @@ jobs:
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           token: ${{ steps.create_token.outputs.token }}
+          persist-credentials: false
 
       - name: Setup JFrog CLI & Authenticate
         id: setup-jfrog
