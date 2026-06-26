@@ -1,4 +1,4 @@
-FROM artifacts-artefacts.devops.cloud-nuage.canada.ca/docker-chainguard-remote/ssc-spc.gc.ca/python@sha256:d8c366e7c935e460b3f2413cde937859619cbf4e51a43863eb7824d054a7f9f8 AS builder
+FROM artifacts-artefacts.devops.cloud-nuage.canada.ca/docker-chainguard-remote/ssc-spc.gc.ca/python@sha256:28ed0c3de5c583ff972448d50cd6f1dc5547f3cc2167532a05b420743b7dffb5 AS builder
 
 ARG GOC_ROOT_A_FINGERPRINT="FE:E0:9E:77:43:BF:D4:3E:D7:D4:D3:ED:50:6C:C7:9D:2D:90:70:FF:A9:29:91:16:87:D4:27:33:70:BE:A3:06"
 ARG GOC_ROOT_A_URL="https://raw.githubusercontent.com/gccloudone-aurora-collab/goc-root-cert-mirror/main/certs/GoC-GdC-Root-A.crt"
@@ -30,7 +30,7 @@ RUN python3 -m pip install --no-cache-dir --requirement /tmp/requirements.txt
 
 USER nonroot
 
-FROM artifacts-artefacts.devops.cloud-nuage.canada.ca/docker-chainguard-remote/ssc-spc.gc.ca/python@sha256:d8c366e7c935e460b3f2413cde937859619cbf4e51a43863eb7824d054a7f9f8 AS runtime-packages
+FROM artifacts-artefacts.devops.cloud-nuage.canada.ca/docker-chainguard-remote/ssc-spc.gc.ca/python@sha256:28ed0c3de5c583ff972448d50cd6f1dc5547f3cc2167532a05b420743b7dffb5 AS runtime-packages
 
 USER root
 
@@ -69,7 +69,7 @@ COPY freshclam.conf /runtime/etc/clamav/freshclam.conf
 
 USER nonroot
 
-FROM artifacts-artefacts.devops.cloud-nuage.canada.ca/docker-chainguard-remote/ssc-spc.gc.ca/python@sha256:0012a1433eeb46032a0ec174e5882fc1937a900cb7e3e497b35d0b600f6b94c5 AS final-base
+FROM artifacts-artefacts.devops.cloud-nuage.canada.ca/docker-chainguard-remote/ssc-spc.gc.ca/python@sha256:28ed0c3de5c583ff972448d50cd6f1dc5547f3cc2167532a05b420743b7dffb5 AS final-base
 
 FROM final-base AS final
 
