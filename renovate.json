@@ -9,7 +9,8 @@
     {
       "description": "Group managed-container dependencies by container folder",
       "matchFileNames": ["managed-containers/**"],
-      "groupName": "{{ lookup (split packageFileDir '/') 1 }} dependencies"
+      "groupName": "{{ lookup (split packageFileDir '/') 1 }} dependencies",
+      "groupSingleUpdates": true
     }
   ]
 }

@@ -3,9 +3,7 @@
     {
       "customType": "regex",
       "description": "Update remote Git source SHAs",
-      "managerFilePatterns": [
-        "/^managed-containers/.+/Dockerfile$/"
-      ],
+      "managerFilePatterns": ["/^managed-containers/.+/Dockerfile$/"],
       "matchStrings": [
         "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+) packageName=(?<packageName>\\S+) currentValue=(?<currentValue>\\S+)\\s+ARG SOURCE_SHA=\"(?<currentDigest>[a-f0-9]{40})\""
       ],

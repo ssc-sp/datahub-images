@@ -56,9 +56,9 @@ With a matching `customManagers.regex` configuration, Renovate can check the cur
 
 Expected result:
 
-* `SOURCE_REF` stays as `develop`.
-* `SOURCE_REPOSITORY` stays unchanged.
-* Renovate updates only `SOURCE_SHA`.
+- `SOURCE_REF` stays as `develop`.
+- `SOURCE_REPOSITORY` stays unchanged.
+- Renovate updates only `SOURCE_SHA`.
 
 Example Renovate custom manager:
 
@@ -68,9 +68,7 @@ Example Renovate custom manager:
     {
       "customType": "regex",
       "description": "Update remote Git source SHAs",
-      "managerFilePatterns": [
-        "/^managed-containers/.+/Dockerfile$/"
-      ],
+      "managerFilePatterns": ["/^managed-containers/.+/Dockerfile$/"],
       "matchStrings": [
         "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+) packageName=(?<packageName>\\S+) currentValue=(?<currentValue>\\S+)\\s+ARG SOURCE_SHA=\"(?<currentDigest>[a-f0-9]{40})\""
       ],
@@ -215,8 +213,8 @@ ARG TARGET_RUNTIME="linux-x64"
 
 Use both together:
 
-* Docker platform: `linux/amd64`
-* .NET RID: `linux-x64`
+- Docker platform: `linux/amd64`
+- .NET RID: `linux-x64`
 
 This avoids platform drift between local development machines and the deployment target.
 
@@ -307,4 +305,3 @@ Depending on how the app resolves credentials, you may also need to set environm
 ```
 
 Managed Identity is typically for Azure-hosted environments, not local containers.
-
