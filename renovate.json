@@ -5,12 +5,12 @@
     "local>ssc-sp/datahub-images//managed-containers/guest-inviter-service/renovate.json",
     "local>ssc-sp/datahub-images//managed-containers/datahub-portal/renovate.json"
   ],
+  "groupSingleUpdates": true,
   "packageRules": [
     {
       "description": "Group managed-container dependencies by container folder",
       "matchFileNames": ["managed-containers/**"],
-      "groupName": "{{ lookup (split packageFileDir '/') 1 }} dependencies",
-      "groupSingleUpdates": true
+      "groupName": "{{ lookup (split packageFileDir '/') 1 }} dependencies"
     }
   ]
 }
