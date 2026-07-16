@@ -1,4 +1,4 @@
-FROM ubuntu:24.04@sha256:6015f66923d7afbc53558d7ccffd325d43b4e249f41a6e93eef074c9505d2233
+FROM ubuntu:26.04@sha256:3131b4cc82a783df6c9df078f86e01819a13594b865c2cad47bd1bca2b7063bb
 LABEL org.opencontainers.image.description="ADO Linux (ubuntu) Self‑Hosted Runner image with PowerShell and the Azure CLI"
 LABEL org.opencontainers.image.source="https://github.com/fsdh-pfds/datahub-images"
 LABEL org.opencontainers.image.url="https://github.com/fsdh-pfds/datahub-images/blob/main/managed-containers/ado-az-pwsh-runner/README.md"
