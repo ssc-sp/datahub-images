@@ -187,7 +187,7 @@ def process_message(message):
 
     blob_metadata = blob_client.get_blob_properties().metadata
     # Read metadata so we can emit the original values in the result message.
-    blob_metadata.update(more_blob_metadata)   
+    blob_metadata.update(more_blob_metadata)
     blob_client.set_blob_metadata(metadata=blob_metadata)
 
     result_queue_client.send_message(
