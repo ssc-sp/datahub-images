@@ -197,7 +197,7 @@ def process_message(message):
                 "ScanEndTime": scan_end_time.isoformat(),
                 "ScanError": ", ".join(scan_result) if scan_result else "",
                 "ScannedFile": blob_url,
-                "OriginalBlobMetadata": dict(blob_metadata or {}),
+                "UpdatedBlobMetadata": dict(blob_metadata or {}),
             }
         )
     )
