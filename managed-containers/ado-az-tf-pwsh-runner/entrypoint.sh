@@ -53,7 +53,7 @@ if [ -n "${ROOT_CA:-}" ]; then
 fi
 
 # ----- Configuration -----
-AZP_AGENT_VERSION="${AZP_AGENT_VERSION:-4.255.0}"
+AZP_AGENT_VERSION="${AZP_AGENT_VERSION:-5.275.0}"
 AZP_AGENT_URL="https://download.agent.dev.azure.com/agent/${AZP_AGENT_VERSION}/vsts-agent-linux-x64-${AZP_AGENT_VERSION}.tar.gz"
 WORKDIR="$(mktemp -d)"
 AZP_WORK="${AZP_WORK:-_work}"
