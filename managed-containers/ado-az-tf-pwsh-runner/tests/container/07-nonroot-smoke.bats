@@ -3,11 +3,12 @@
 load test_helper
 
 setup() {
-  setup_container_test
+	setup_container_test
 }
 
 @test "07.01 runner can execute all primary tools without elevated privileges" {
-  container_script="$(cat <<'SCRIPT'
+	container_script="$(
+		cat <<'SCRIPT'
 set -euo pipefail
 
 test "$(id -u)" -ne 0
@@ -26,17 +27,17 @@ test -s /tmp/powershell-version.txt
 
 echo "Terraform, Azure CLI, and PowerShell ran successfully as $(id -un)."
 SCRIPT
-)"
+	)"
 
-  run run_in_container "${container_script}"
-  print_test_output
+	run run_in_container "${container_script}"
+	print_test_output
 
-  [ "${status}" -eq 0 ]
-  [[ "${output}" == *"ran successfully as runner"* ]]
+	[ "${status}" -eq 0 ]
+	[[ "${output}" == *"ran successfully as runner"* ]]
 }
 
 @test "07.02 runner can write to its home and temporary directories" {
-  run run_in_container '
+	run run_in_container '
     set -euo pipefail
 
     for directory in "${HOME}" /tmp
@@ -52,9 +53,9 @@ SCRIPT
       printf "%s is writable\n" "${directory}"
     done
   '
-  print_test_output
+	print_test_output
 
-  [ "${status}" -eq 0 ]
-  [[ "${output}" == *"/home/runner is writable"* ]]
-  [[ "${output}" == *"/tmp is writable"* ]]
+	[ "${status}" -eq 0 ]
+	[[ "${output}" == *"/home/runner is writable"* ]]
+	[[ "${output}" == *"/tmp is writable"* ]]
 }

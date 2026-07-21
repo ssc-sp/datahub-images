@@ -3,11 +3,11 @@
 load test_helper
 
 setup() {
-  setup_container_test
+	setup_container_test
 }
 
 @test "06.01 HashiCorp repository uses a scoped signing key" {
-  run run_in_container '
+	run run_in_container '
     set -euo pipefail
 
     repository_file=/etc/apt/sources.list.d/hashicorp.list
@@ -25,14 +25,14 @@ setup() {
 
     test -r /usr/share/keyrings/hashicorp-archive-keyring.gpg
   '
-  print_test_output
+	print_test_output
 
-  [ "${status}" -eq 0 ]
-  [[ "${output}" == *"https://apt.releases.hashicorp.com"* ]]
+	[ "${status}" -eq 0 ]
+	[[ "${output}" == *"https://apt.releases.hashicorp.com"* ]]
 }
 
 @test "06.02 Microsoft product repository is temporarily pinned to noble" {
-  run run_in_container '
+	run run_in_container '
     set -euo pipefail
 
     repository_file=/etc/apt/sources.list.d/microsoft-prod.list
@@ -50,14 +50,14 @@ setup() {
 
     test -r /usr/share/keyrings/microsoft-archive-keyring.gpg
   '
-  print_test_output
+	print_test_output
 
-  [ "${status}" -eq 0 ]
-  [[ "${output}" == *"/ubuntu/24.04/prod noble main"* ]]
+	[ "${status}" -eq 0 ]
+	[[ "${output}" == *"/ubuntu/24.04/prod noble main"* ]]
 }
 
 @test "06.03 Azure CLI repository is temporarily pinned to noble" {
-  run run_in_container '
+	run run_in_container '
     set -euo pipefail
 
     repository_file=/etc/apt/sources.list.d/azure-cli.list
@@ -73,14 +73,14 @@ setup() {
       "https://packages.microsoft.com/repos/azure-cli/ noble main" \
       "${repository_file}"
   '
-  print_test_output
+	print_test_output
 
-  [ "${status}" -eq 0 ]
-  [[ "${output}" == *"/repos/azure-cli/ noble main"* ]]
+	[ "${status}" -eq 0 ]
+	[[ "${output}" == *"/repos/azure-cli/ noble main"* ]]
 }
 
 @test "06.04 addon repositories do not disable signature verification" {
-  run run_in_container '
+	run run_in_container '
     set -euo pipefail
 
     if grep -ERi \
@@ -94,8 +94,8 @@ setup() {
 
     echo "All configured APT repositories retain signature verification."
   '
-  print_test_output
+	print_test_output
 
-  [ "${status}" -eq 0 ]
-  [[ "${output}" == *"retain signature verification"* ]]
+	[ "${status}" -eq 0 ]
+	[[ "${output}" == *"retain signature verification"* ]]
 }

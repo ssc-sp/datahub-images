@@ -3,11 +3,12 @@
 load test_helper
 
 setup() {
-  setup_container_test
+	setup_container_test
 }
 
 @test "05.01 Government of Canada root certificate fingerprint is correct" {
-  container_script="$(cat <<'SCRIPT'
+	container_script="$(
+		cat <<'SCRIPT'
 set -euo pipefail
 
 pwsh -NoLogo -NoProfile -NonInteractive -Command - <<'POWERSHELL'
@@ -49,17 +50,18 @@ if ($actualCompact -ne $expectedCompact) {
 Write-Host "Government of Canada root certificate fingerprint is correct."
 POWERSHELL
 SCRIPT
-)"
+	)"
 
-  run run_in_container "${container_script}"
-  print_test_output
+	run run_in_container "${container_script}"
+	print_test_output
 
-  [ "${status}" -eq 0 ]
-  [[ "${output}" == *"Government of Canada root certificate fingerprint is correct."* ]]
+	[ "${status}" -eq 0 ]
+	[[ "${output}" == *"Government of Canada root certificate fingerprint is correct."* ]]
 }
 
 @test "05.02 Government of Canada root certificate is in Ubuntu CA bundle" {
-  container_script="$(cat <<'SCRIPT'
+	container_script="$(
+		cat <<'SCRIPT'
 set -euo pipefail
 
 pwsh -NoLogo -NoProfile -NonInteractive -Command - <<'POWERSHELL'
@@ -86,11 +88,11 @@ if (-not $bundlePem.Contains($certificatePem)) {
 Write-Host "Government of Canada root certificate is present in Ubuntu's CA bundle."
 POWERSHELL
 SCRIPT
-)"
+	)"
 
-  run run_in_container "${container_script}"
-  print_test_output
+	run run_in_container "${container_script}"
+	print_test_output
 
-  [ "${status}" -eq 0 ]
-  [[ "${output}" == *"Government of Canada root certificate is present in Ubuntu's CA bundle."* ]]
+	[ "${status}" -eq 0 ]
+	[[ "${output}" == *"Government of Canada root certificate is present in Ubuntu's CA bundle."* ]]
 }

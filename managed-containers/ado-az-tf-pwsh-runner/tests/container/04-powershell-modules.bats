@@ -3,11 +3,12 @@
 load test_helper
 
 setup() {
-  setup_container_test
+	setup_container_test
 }
 
 @test "04.01 expected PowerShell module versions are installed" {
-  container_script="$(cat <<'SCRIPT'
+	container_script="$(
+		cat <<'SCRIPT'
 set -euo pipefail
 
 pwsh -NoLogo -NoProfile -NonInteractive -Command - <<'POWERSHELL'
@@ -39,17 +40,18 @@ POWERSHELL
 
 printf '%s\n' "POWERSHELL_MODULE_VERSIONS_OK"
 SCRIPT
-)"
+	)"
 
-  run run_in_container "${container_script}"
-  print_test_output
+	run run_in_container "${container_script}"
+	print_test_output
 
-  [ "${status}" -eq 0 ]
-  [[ "${output}" == *"POWERSHELL_MODULE_VERSIONS_OK"* ]]
+	[ "${status}" -eq 0 ]
+	[[ "${output}" == *"POWERSHELL_MODULE_VERSIONS_OK"* ]]
 }
 
 @test "04.02 representative PowerShell modules can be imported" {
-  container_script="$(cat <<'SCRIPT'
+	container_script="$(
+		cat <<'SCRIPT'
 set -euo pipefail
 
 pwsh -NoLogo -NoProfile -NonInteractive -Command - <<'POWERSHELL'
@@ -76,11 +78,11 @@ POWERSHELL
 
 printf '%s\n' "POWERSHELL_MODULE_IMPORTS_OK"
 SCRIPT
-)"
+	)"
 
-  run run_in_container "${container_script}"
-  print_test_output
+	run run_in_container "${container_script}"
+	print_test_output
 
-  [ "${status}" -eq 0 ]
-  [[ "${output}" == *"POWERSHELL_MODULE_IMPORTS_OK"* ]]
+	[ "${status}" -eq 0 ]
+	[[ "${output}" == *"POWERSHELL_MODULE_IMPORTS_OK"* ]]
 }
