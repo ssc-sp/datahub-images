@@ -49,8 +49,8 @@ jobs:
 
           dockerfiles_to_build=()
           for file in "${changed_files_list[@]}"; do
-            # Check if the changed file is a Dockerfile
-            if [[ $file == *Dockerfile ]]; then
+            # Check if the changed file is a Dockerfile AND ensure it still exists
+            if [[ $file == *Dockerfile ]] && [[ -f "$file" ]]; then
               dockerfiles_to_build+=("$file")
             # Check if the directory of the changed file contains a Dockerfile
             elif [[ -f $(dirname "$file")/Dockerfile ]]; then
