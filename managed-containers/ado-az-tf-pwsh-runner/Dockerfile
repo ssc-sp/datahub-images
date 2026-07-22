@@ -74,6 +74,6 @@ RUN chmod +x /entrypoint.sh
 
 RUN useradd -m -s /bin/bash runner
 
-# Switch to unprivileged user and set entrypoint
+# Switch to unprivileged user and set entrypoint properly
 USER runner
 ENTRYPOINT ["/entrypoint.sh"]
