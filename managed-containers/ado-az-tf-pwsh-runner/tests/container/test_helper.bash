@@ -25,5 +25,6 @@ inspect_image() {
 }
 
 print_test_output() {
+	# shellcheck disable=SC2154
 	printf '%s\n' "${output}"
 }
