@@ -87,10 +87,10 @@ jobs:
             | sed '/^$/d; s#^\./##; s#/\+#/#g' \
             | while IFS= read -r p; do
                 [ -z "$p" ] && continue
-                
+
                 # Resolve path (handle ../ and .)
                 resolved_path=$(realpath -m -- "$p")
-                
+
                 # If the Dockerfile was deleted in this PR, 'realpath' resolves the string,
                 # but '-f' will return false, preventing it from being added to the build matrix.
                 if [ -f "$resolved_path" ]; then
@@ -142,7 +142,6 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
 
-  # Job 1: Build the image and output it as an artifact
   build:
     permissions:
       id-token: write
@@ -222,6 +221,38 @@ jobs:
           MATRIX_IMAGE: ${{ matrix.image }}
           MATRIX_DOCKERFILE: ${{ matrix.dockerfile }}
           MATRIX_CONTEXT: ${{ matrix.context }}
+
+      - name: Run container tests
+        run: |
+          set -euo pipefail
+
+          test_root="${MATRIX_CONTEXT}/tests"
+
+          if [ ! -d "$test_root" ]; then
+            echo "::notice title=No container tests::No tests are present for ${MATRIX_NAME}; continuing."
+            exit 0
+          fi
+
+          mapfile -d '' test_files < <(
+            find "$test_root" -type f -name '*.bats' -print0
+          )
+
+          if [ "${#test_files[@]}" -eq 0 ]; then
+            echo "::notice title=No container tests::No Bats tests are present for ${MATRIX_NAME}; continuing."
+            exit 0
+          fi
+
+          echo "Found ${#test_files[@]} Bats test file(s):"
+          printf '  %s\n' "${test_files[@]}"
+
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends bats
+
+          IMAGE="${MATRIX_IMAGE}" bats "${test_files[@]}"
+        env:
+          MATRIX_CONTEXT: ${{ matrix.context }}
+          MATRIX_IMAGE: ${{ matrix.image }}
+          MATRIX_NAME: ${{ matrix.name }}
 
       - name: Save Image to Tarball
         run: |
