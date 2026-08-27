@@ -58,4 +58,4 @@ LABEL org.opencontainers.image.description="ADO Linux (ubuntu) Self‑Hosted Run
 
 ## Entrypoint
 
-The container’s entrypoint is `/entrypoint.sh`. Drop any custom initialization or wrapper logic in that script to tailor the runner registration or environment setup.
+The container’s entrypoint is `/entrypoint.sh`. Drop any  custom initialization or wrapper logic in that script to tailor the runner registration or environment setup.
