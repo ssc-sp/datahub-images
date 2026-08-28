@@ -235,7 +235,7 @@ jobs:
           path: image.tar
           retention-days: 1
 
-  test:
+  build-tests:
     permissions:
       actions: read
       contents: read
