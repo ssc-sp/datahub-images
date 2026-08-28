@@ -103,14 +103,14 @@ assert os.getgid() == 65532
   run run_in_container '
     set -euo pipefail
 
-    test -r /clamav-blobavscan/entrypoint.sh
-    test -r /clamav-blobavscan/requirements.txt
-    test -r /clamav-blobavscan/scan_blob.py
+    test -r /app/entrypoint.sh
+    test -r /app/requirements.txt
+    test -r /app/scan_blob.py
 
     printf "%s\n" \
-      /clamav-blobavscan/entrypoint.sh \
-      /clamav-blobavscan/requirements.txt \
-      /clamav-blobavscan/scan_blob.py
+      /app/entrypoint.sh \
+      /app/requirements.txt \
+      /app/scan_blob.py
   '
 
   echo "${output}"
