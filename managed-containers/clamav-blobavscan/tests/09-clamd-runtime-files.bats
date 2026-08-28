@@ -1,13 +1,14 @@
 #!/usr/bin/env bats
 
 setup() {
-  IMAGE="${IMAGE:-clamav-blobavscan:latest}"
-  PLATFORM="${PLATFORM:-linux/amd64}"
-  CONTAINER_RUNTIME="${CONTAINER_RUNTIME:-docker}"
+	IMAGE="${IMAGE:-clamav-blobavscan:latest}"
+	PLATFORM="${PLATFORM:-linux/amd64}"
+	CONTAINER_RUNTIME="${CONTAINER_RUNTIME:-docker}"
 }
 
 @test "09.01 clamd creates its socket pid and log files as nonroot" {
-  container_script="$(cat <<'SCRIPT'
+	container_script="$(
+		cat <<'SCRIPT'
 set -euo pipefail
 
 echo "Downloading ClamAV signature databases..."
@@ -112,20 +113,20 @@ if errors:
 print("clamd runtime file test passed.")
 PY
 SCRIPT
-)"
+	)"
 
-  run "${CONTAINER_RUNTIME}" run \
-    --rm \
-    --platform "${PLATFORM}" \
-    --entrypoint /bin/bash \
-    "${IMAGE}" \
-    -lc "${container_script}"
+	run "${CONTAINER_RUNTIME}" run \
+		--rm \
+		--platform "${PLATFORM}" \
+		--entrypoint /bin/bash \
+		"${IMAGE}" \
+		-lc "${container_script}"
 
-  echo "${output}"
+	echo "${output}"
 
-  [ "${status}" -eq 0 ]
-  [[ "${output}" == *"PASS: socket"* ]]
-  [[ "${output}" == *"PASS: pid"* ]]
-  [[ "${output}" == *"PASS: log"* ]]
-  [[ "${output}" == *"clamd runtime file test passed."* ]]
+	[ "${status}" -eq 0 ]
+	[[ "${output}" == *"PASS: socket"* ]]
+	[[ "${output}" == *"PASS: pid"* ]]
+	[[ "${output}" == *"PASS: log"* ]]
+	[[ "${output}" == *"clamd runtime file test passed."* ]]
 }

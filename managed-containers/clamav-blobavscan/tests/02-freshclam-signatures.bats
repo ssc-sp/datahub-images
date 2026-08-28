@@ -1,13 +1,14 @@
 #!/usr/bin/env bats
 
 setup() {
-  IMAGE="${IMAGE:-clamav-blobavscan:latest}"
-  PLATFORM="${PLATFORM:-linux/amd64}"
-  CONTAINER_RUNTIME="${CONTAINER_RUNTIME:-docker}"
+	IMAGE="${IMAGE:-clamav-blobavscan:latest}"
+	PLATFORM="${PLATFORM:-linux/amd64}"
+	CONTAINER_RUNTIME="${CONTAINER_RUNTIME:-docker}"
 }
 
 @test "02.01 freshclam downloads ClamAV signature databases" {
-  container_script="$(cat <<'SCRIPT'
+	container_script="$(
+		cat <<'SCRIPT'
 set -euo pipefail
 
 freshclam \
@@ -82,20 +83,20 @@ print()
 print("All required ClamAV signature databases were downloaded.")
 PY
 SCRIPT
-)"
+	)"
 
-  run "${CONTAINER_RUNTIME}" run \
-    --rm \
-    --platform "${PLATFORM}" \
-    --entrypoint /bin/bash \
-    "${IMAGE}" \
-    -lc "${container_script}"
+	run "${CONTAINER_RUNTIME}" run \
+		--rm \
+		--platform "${PLATFORM}" \
+		--entrypoint /bin/bash \
+		"${IMAGE}" \
+		-lc "${container_script}"
 
-  echo "${output}"
+	echo "${output}"
 
-  [ "${status}" -eq 0 ]
-  [[ "${output}" == *"PASS: main database"* ]]
-  [[ "${output}" == *"PASS: daily database"* ]]
-  [[ "${output}" == *"PASS: bytecode database"* ]]
-  [[ "${output}" == *"All required ClamAV signature databases were downloaded."* ]]
+	[ "${status}" -eq 0 ]
+	[[ "${output}" == *"PASS: main database"* ]]
+	[[ "${output}" == *"PASS: daily database"* ]]
+	[[ "${output}" == *"PASS: bytecode database"* ]]
+	[[ "${output}" == *"All required ClamAV signature databases were downloaded."* ]]
 }

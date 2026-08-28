@@ -1,13 +1,14 @@
 #!/usr/bin/env bats
 
 setup() {
-  IMAGE="${IMAGE:-clamav-blobavscan:latest}"
-  PLATFORM="${PLATFORM:-linux/amd64}"
-  CONTAINER_RUNTIME="${CONTAINER_RUNTIME:-docker}"
+	IMAGE="${IMAGE:-clamav-blobavscan:latest}"
+	PLATFORM="${PLATFORM:-linux/amd64}"
+	CONTAINER_RUNTIME="${CONTAINER_RUNTIME:-docker}"
 }
 
 @test "03.01 clamd starts and responds through pyclamd" {
-  container_script="$(cat <<'SCRIPT'
+	container_script="$(
+		cat <<'SCRIPT'
 set -euo pipefail
 
 echo "Downloading ClamAV signature databases..."
@@ -72,18 +73,18 @@ if log_path.is_file():
 sys.exit(1)
 PY
 SCRIPT
-)"
+	)"
 
-  run "${CONTAINER_RUNTIME}" run \
-    --rm \
-    --platform "${PLATFORM}" \
-    --entrypoint /bin/bash \
-    "${IMAGE}" \
-    -lc "${container_script}"
+	run "${CONTAINER_RUNTIME}" run \
+		--rm \
+		--platform "${PLATFORM}" \
+		--entrypoint /bin/bash \
+		"${IMAGE}" \
+		-lc "${container_script}"
 
-  echo "${output}"
+	echo "${output}"
 
-  [ "${status}" -eq 0 ]
-  [[ "${output}" == *"pyclamd ping returned True"* ]]
-  [[ "${output}" == *"clamd is running and responding through pyclamd."* ]]
+	[ "${status}" -eq 0 ]
+	[[ "${output}" == *"pyclamd ping returned True"* ]]
+	[[ "${output}" == *"clamd is running and responding through pyclamd."* ]]
 }

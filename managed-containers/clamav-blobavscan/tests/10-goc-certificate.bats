@@ -1,13 +1,14 @@
 #!/usr/bin/env bats
 
 setup() {
-  IMAGE="${IMAGE:-clamav-blobavscan:latest}"
-  PLATFORM="${PLATFORM:-linux/amd64}"
-  CONTAINER_RUNTIME="${CONTAINER_RUNTIME:-docker}"
+	IMAGE="${IMAGE:-clamav-blobavscan:latest}"
+	PLATFORM="${PLATFORM:-linux/amd64}"
+	CONTAINER_RUNTIME="${CONTAINER_RUNTIME:-docker}"
 }
 
 @test "10.01 Government of Canada root certificate fingerprint is correct" {
-  container_script="$(cat <<'SCRIPT'
+	container_script="$(
+		cat <<'SCRIPT'
 set -euo pipefail
 
 python3 - <<'PY'
@@ -55,23 +56,24 @@ if actual_compact != expected_compact:
 print("Government of Canada root certificate fingerprint is correct.")
 PY
 SCRIPT
-)"
+	)"
 
-  run "${CONTAINER_RUNTIME}" run \
-    --rm \
-    --platform "${PLATFORM}" \
-    --entrypoint /bin/bash \
-    "${IMAGE}" \
-    -lc "${container_script}"
+	run "${CONTAINER_RUNTIME}" run \
+		--rm \
+		--platform "${PLATFORM}" \
+		--entrypoint /bin/bash \
+		"${IMAGE}" \
+		-lc "${container_script}"
 
-  echo "${output}"
+	echo "${output}"
 
-  [ "${status}" -eq 0 ]
-  [[ "${output}" == *"Government of Canada root certificate fingerprint is correct."* ]]
+	[ "${status}" -eq 0 ]
+	[[ "${output}" == *"Government of Canada root certificate fingerprint is correct."* ]]
 }
 
 @test "10.02 Government of Canada root certificate is trusted by Python" {
-  container_script="$(cat <<'SCRIPT'
+	container_script="$(
+		cat <<'SCRIPT'
 set -euo pipefail
 
 python3 - <<'PY'
@@ -105,17 +107,17 @@ if expected_compact not in trusted_fingerprints:
 print("Government of Canada root certificate is trusted by Python.")
 PY
 SCRIPT
-)"
+	)"
 
-  run "${CONTAINER_RUNTIME}" run \
-    --rm \
-    --platform "${PLATFORM}" \
-    --entrypoint /bin/bash \
-    "${IMAGE}" \
-    -lc "${container_script}"
+	run "${CONTAINER_RUNTIME}" run \
+		--rm \
+		--platform "${PLATFORM}" \
+		--entrypoint /bin/bash \
+		"${IMAGE}" \
+		-lc "${container_script}"
 
-  echo "${output}"
+	echo "${output}"
 
-  [ "${status}" -eq 0 ]
-  [[ "${output}" == *"Government of Canada root certificate is trusted by Python."* ]]
+	[ "${status}" -eq 0 ]
+	[[ "${output}" == *"Government of Canada root certificate is trusted by Python."* ]]
 }

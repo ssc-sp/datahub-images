@@ -1,13 +1,14 @@
 #!/usr/bin/env bats
 
 setup() {
-  IMAGE="${IMAGE:-clamav-blobavscan:latest}"
-  PLATFORM="${PLATFORM:-linux/amd64}"
-  CONTAINER_RUNTIME="${CONTAINER_RUNTIME:-docker}"
+	IMAGE="${IMAGE:-clamav-blobavscan:latest}"
+	PLATFORM="${PLATFORM:-linux/amd64}"
+	CONTAINER_RUNTIME="${CONTAINER_RUNTIME:-docker}"
 }
 
 @test "04.01 pyclamd detects the EICAR test file" {
-  container_script="$(cat <<'SCRIPT'
+	container_script="$(
+		cat <<'SCRIPT'
 set -euo pipefail
 
 echo "Downloading ClamAV signature databases..."
@@ -106,19 +107,19 @@ print(
 sys.exit(1)
 PY
 SCRIPT
-)"
+	)"
 
-  run "${CONTAINER_RUNTIME}" run \
-    --rm \
-    --platform "${PLATFORM}" \
-    --entrypoint /bin/bash \
-    "${IMAGE}" \
-    -lc "${container_script}"
+	run "${CONTAINER_RUNTIME}" run \
+		--rm \
+		--platform "${PLATFORM}" \
+		--entrypoint /bin/bash \
+		"${IMAGE}" \
+		-lc "${container_script}"
 
-  echo "${output}"
+	echo "${output}"
 
-  [ "${status}" -eq 0 ]
-  [[ "${output}" == *"Detection status: FOUND"* ]]
-  [[ "${output}" == *"Detected signature:"*"Eicar"* ]]
-  [[ "${output}" == *"pyclamd EICAR scan test passed"* ]]
+	[ "${status}" -eq 0 ]
+	[[ "${output}" == *"Detection status: FOUND"* ]]
+	[[ "${output}" == *"Detected signature:"*"Eicar"* ]]
+	[[ "${output}" == *"pyclamd EICAR scan test passed"* ]]
 }

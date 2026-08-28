@@ -1,83 +1,88 @@
 #!/usr/bin/env bats
 
 setup() {
-  IMAGE="${IMAGE:-clamav-blobavscan:latest}"
-  PLATFORM="${PLATFORM:-linux/amd64}"
-  CONTAINER_RUNTIME="${CONTAINER_RUNTIME:-docker}"
+	IMAGE="${IMAGE:-clamav-blobavscan:latest}"
+	PLATFORM="${PLATFORM:-linux/amd64}"
+	CONTAINER_RUNTIME="${CONTAINER_RUNTIME:-docker}"
 }
 
 run_in_container() {
-  "${CONTAINER_RUNTIME}" run \
-    --rm \
-    --platform "${PLATFORM}" \
-    --entrypoint /bin/bash \
-    "${IMAGE}" \
-    -lc "$1"
+	"${CONTAINER_RUNTIME}" run \
+		--rm \
+		--platform "${PLATFORM}" \
+		--entrypoint /bin/bash \
+		"${IMAGE}" \
+		-lc "$1"
 }
 
 @test "01.01 container runs as the nonroot user" {
-  run run_in_container '
-    python -c "
+	container_script="$(
+		cat <<'SCRIPT'
+python - <<'PY'
 import os
-print(f\"uid={os.getuid()} gid={os.getgid()}\")
+
+print(f"uid={os.getuid()} gid={os.getgid()}")
 assert os.getuid() == 65532
 assert os.getgid() == 65532
-"
-  '
+PY
+SCRIPT
+	)"
 
-  echo "${output}"
+	run run_in_container "${container_script}"
 
-  [ "${status}" -eq 0 ]
-  [[ "${output}" == *"uid=65532 gid=65532"* ]]
+	echo "${output}"
+
+	[ "${status}" -eq 0 ]
+	[[ "${output}" == *"uid=65532 gid=65532"* ]]
 }
 
 @test "01.02 Python is installed" {
-  run run_in_container '
+	run run_in_container '
     python --version
   '
 
-  echo "${output}"
+	echo "${output}"
 
-  [ "${status}" -eq 0 ]
-  [[ "${output}" == *"Python 3."* ]]
+	[ "${status}" -eq 0 ]
+	[[ "${output}" == *"Python 3."* ]]
 }
 
 @test "01.03 pip is installed in the virtual environment" {
-  run run_in_container '
+	run run_in_container '
     pip --version
     command -v pip
   '
 
-  echo "${output}"
+	echo "${output}"
 
-  [ "${status}" -eq 0 ]
-  [[ "${output}" == *"/opt/venv/"* ]]
+	[ "${status}" -eq 0 ]
+	[[ "${output}" == *"/opt/venv/"* ]]
 }
 
 @test "01.04 Bash is installed" {
-  run run_in_container '
+	run run_in_container '
     bash --version
   '
 
-  echo "${output}"
+	echo "${output}"
 
-  [ "${status}" -eq 0 ]
-  [[ "${output}" == *"GNU bash"* ]]
+	[ "${status}" -eq 0 ]
+	[[ "${output}" == *"GNU bash"* ]]
 }
 
 @test "01.05 ClamAV is installed" {
-  run run_in_container '
+	run run_in_container '
     clamscan --version
   '
 
-  echo "${output}"
+	echo "${output}"
 
-  [ "${status}" -eq 0 ]
-  [[ "${output}" == *"ClamAV"* ]]
+	[ "${status}" -eq 0 ]
+	[[ "${output}" == *"ClamAV"* ]]
 }
 
 @test "01.06 required runtime directories are writable" {
-  run run_in_container '
+	run run_in_container '
     set -euo pipefail
 
     for directory in \
@@ -91,16 +96,16 @@ assert os.getgid() == 65532
     done
   '
 
-  echo "${output}"
+	echo "${output}"
 
-  [ "${status}" -eq 0 ]
-  [[ "${output}" == *"/datahub-temp is writable"* ]]
-  [[ "${output}" == *"/var/lib/clamav is writable"* ]]
-  [[ "${output}" == *"/var/run/clamav is writable"* ]]
+	[ "${status}" -eq 0 ]
+	[[ "${output}" == *"/datahub-temp is writable"* ]]
+	[[ "${output}" == *"/var/lib/clamav is writable"* ]]
+	[[ "${output}" == *"/var/run/clamav is writable"* ]]
 }
 
 @test "01.07 required application files exist" {
-  run run_in_container '
+	run run_in_container '
     set -euo pipefail
 
     test -r /app/entrypoint.sh
@@ -113,13 +118,13 @@ assert os.getgid() == 65532
       /app/scan_blob.py
   '
 
-  echo "${output}"
+	echo "${output}"
 
-  [ "${status}" -eq 0 ]
+	[ "${status}" -eq 0 ]
 }
 
 @test "01.08 required Python packages can be imported" {
-  run run_in_container '
+	run run_in_container '
     python -c "
 import azure.data.tables
 import azure.identity
@@ -131,8 +136,8 @@ print(\"Required Python packages imported successfully\")
 "
   '
 
-  echo "${output}"
+	echo "${output}"
 
-  [ "${status}" -eq 0 ]
-  [[ "${output}" == *"Required Python packages imported successfully"* ]]
+	[ "${status}" -eq 0 ]
+	[[ "${output}" == *"Required Python packages imported successfully"* ]]
 }

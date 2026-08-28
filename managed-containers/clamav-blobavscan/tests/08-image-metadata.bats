@@ -1,59 +1,59 @@
 #!/usr/bin/env bats
 
 setup() {
-  IMAGE="${IMAGE:-clamav-blobavscan:latest}"
-  CONTAINER_RUNTIME="${CONTAINER_RUNTIME:-docker}"
+	IMAGE="${IMAGE:-clamav-blobavscan:latest}"
+	CONTAINER_RUNTIME="${CONTAINER_RUNTIME:-docker}"
 }
 
 @test "08.01 image runs as nonroot by default" {
-  run "${CONTAINER_RUNTIME}" image inspect \
-    "${IMAGE}" \
-    --format '{{.Config.User}}'
+	run "${CONTAINER_RUNTIME}" image inspect \
+		"${IMAGE}" \
+		--format '{{.Config.User}}'
 
-  echo "${output}"
+	echo "${output}"
 
-  [ "${status}" -eq 0 ]
+	[ "${status}" -eq 0 ]
 
-  case "${output}" in
-    nonroot|65532|65532:65532)
-      ;;
-    *)
-      echo "Expected nonroot or UID 65532, got: ${output}" >&2
-      return 1
-      ;;
-  esac
+	case "${output}" in
+	nonroot | 65532 | 65532:65532)
+		;;
+	*)
+		echo "Expected nonroot or UID 65532, got: ${output}" >&2
+		return 1
+		;;
+	esac
 }
 
 @test "08.02 image uses the expected working directory" {
-  run "${CONTAINER_RUNTIME}" image inspect \
-    "${IMAGE}" \
-    --format '{{.Config.WorkingDir}}'
+	run "${CONTAINER_RUNTIME}" image inspect \
+		"${IMAGE}" \
+		--format '{{.Config.WorkingDir}}'
 
-  echo "${output}"
+	echo "${output}"
 
-  [ "${status}" -eq 0 ]
-  [ "${output}" = "/app" ]
+	[ "${status}" -eq 0 ]
+	[ "${output}" = "/app" ]
 }
 
 @test "08.03 image uses the expected startup command" {
-  run "${CONTAINER_RUNTIME}" image inspect \
-    "${IMAGE}" \
-    --format '{{json .Config.Cmd}}'
+	run "${CONTAINER_RUNTIME}" image inspect \
+		"${IMAGE}" \
+		--format '{{json .Config.Cmd}}'
 
-  echo "${output}"
+	echo "${output}"
 
-  [ "${status}" -eq 0 ]
-  [[ "${output}" == *'"/bin/bash"'* ]]
-  [[ "${output}" == *'"/app/entrypoint.sh"'* ]]
+	[ "${status}" -eq 0 ]
+	[[ "${output}" == *'"/bin/bash"'* ]]
+	[[ "${output}" == *'"/app/entrypoint.sh"'* ]]
 }
 
 @test "08.04 image platform is linux amd64" {
-  run "${CONTAINER_RUNTIME}" image inspect \
-    "${IMAGE}" \
-    --format '{{.Os}}/{{.Architecture}}'
+	run "${CONTAINER_RUNTIME}" image inspect \
+		"${IMAGE}" \
+		--format '{{.Os}}/{{.Architecture}}'
 
-  echo "${output}"
+	echo "${output}"
 
-  [ "${status}" -eq 0 ]
-  [ "${output}" = "linux/amd64" ]
+	[ "${status}" -eq 0 ]
+	[ "${output}" = "linux/amd64" ]
 }
