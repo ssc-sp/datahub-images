@@ -1,1 +1,1 @@
-FROM artifacts-artefacts.devops.cloud-nuage.canada.ca/docker-chainguard-remote/ssc-spc.gc.ca/python:latest@sha256:28ed0c3de5c583ff972448d50cd6f1dc5547f3cc2167532a05b420743b7dffb5
+FROM artifacts-artefacts.devops.cloud-nuage.canada.ca/docker-chainguard-remote/ssc-spc.gc.ca/python:latest@sha256:f608e1087eb52b6b659d7abfd1d1a837b9db4d0cd303a8caec32d59b652e698d
