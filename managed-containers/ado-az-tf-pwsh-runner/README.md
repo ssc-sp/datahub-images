@@ -9,7 +9,6 @@ This Docker image provides a ready‑to‑use, self‑hosted Azure DevOps (ADO) 
 - **Azure CLI** to interact with Azure resources directly from your pipelines
 - **Terraform CLI** to interact and deploy terraform resources directly from your pipelines
 - Common utilities out of the box:
-
   - `openssl`, `ca-certificates`
   - `jq`, `curl`, `wget`
   - `gpg`, `lsb-release`, `git`, `debsums`
