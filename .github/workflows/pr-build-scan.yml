@@ -222,7 +222,8 @@ jobs:
           MATRIX_DOCKERFILE: ${{ matrix.dockerfile }}
           MATRIX_CONTEXT: ${{ matrix.context }}
 
-      - name: Run container tests
+      - name: Detect container tests
+        id: detect-tests
         run: |
           set -euo pipefail
 
@@ -230,6 +231,7 @@ jobs:
 
           if [ ! -d "$test_root" ]; then
             echo "::notice title=No container tests::No tests are present for ${MATRIX_NAME}; continuing."
+            echo "present=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -239,20 +241,30 @@ jobs:
 
           if [ "${#test_files[@]}" -eq 0 ]; then
             echo "::notice title=No container tests::No Bats tests are present for ${MATRIX_NAME}; continuing."
+            echo "present=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          echo "Found ${#test_files[@]} Bats test file(s):"
-          printf '  %s\n' "${test_files[@]}"
-
-          sudo apt-get update
-          sudo apt-get install --yes --no-install-recommends bats
-
-          IMAGE="${MATRIX_IMAGE}" bats "${test_files[@]}"
+          echo "Found ${#test_files[@]} Bats test file(s) for ${MATRIX_NAME}."
+          echo "present=true" >> "$GITHUB_OUTPUT"
         env:
           MATRIX_CONTEXT: ${{ matrix.context }}
-          MATRIX_IMAGE: ${{ matrix.image }}
           MATRIX_NAME: ${{ matrix.name }}
+
+      - name: Setup Bats and Bats libraries
+        if: ${{ steps.detect-tests.outputs.present == 'true' }}
+        id: setup-bats
+        uses: bats-core/bats-action@77d6fb60505b4d0d1d73e48bd035b55074bbfb43 # v4.0.0
+
+      - name: Run container tests
+        if: ${{ steps.detect-tests.outputs.present == 'true' }}
+        shell: bash
+        env:
+          BATS_LIB_PATH: ${{ steps.setup-bats.outputs.lib-path }}
+          TERM: xterm
+          IMAGE: ${{ matrix.image }}
+          MATRIX_CONTEXT: ${{ matrix.context }}
+        run: bats --recursive "${MATRIX_CONTEXT}/tests"
 
       - name: Save Image to Tarball
         run: |
