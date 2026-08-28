@@ -82,19 +82,23 @@ SCRIPT
 }
 
 @test "01.06 required runtime directories are writable" {
-	run run_in_container '
-    set -euo pipefail
+	container_script="$(
+		cat <<'SCRIPT'
+set -euo pipefail
 
-    for directory in \
-      /datahub-temp \
-      /var/lib/clamav \
-      /var/run/clamav
-    do
-      test -d "${directory}"
-      test -w "${directory}"
-      echo "${directory} is writable"
-    done
-  '
+for directory in \
+  /datahub-temp \
+  /var/lib/clamav \
+  /var/run/clamav
+do
+  test -d "${directory}"
+  test -w "${directory}"
+  echo "${directory} is writable"
+done
+SCRIPT
+	)"
+
+	run run_in_container "${container_script}"
 
 	echo "${output}"
 
