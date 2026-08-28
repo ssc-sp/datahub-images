@@ -1,4 +1,4 @@
-name: Pull Request - Build and Scan
+name: Pull Request - Build, Test and Scan
 
 on:
   pull_request:
@@ -87,10 +87,10 @@ jobs:
             | sed '/^$/d; s#^\./##; s#/\+#/#g' \
             | while IFS= read -r p; do
                 [ -z "$p" ] && continue
-
+                
                 # Resolve path (handle ../ and .)
                 resolved_path=$(realpath -m -- "$p")
-
+                
                 # If the Dockerfile was deleted in this PR, 'realpath' resolves the string,
                 # but '-f' will return false, preventing it from being added to the build matrix.
                 if [ -f "$resolved_path" ]; then
@@ -222,6 +222,36 @@ jobs:
           MATRIX_DOCKERFILE: ${{ matrix.dockerfile }}
           MATRIX_CONTEXT: ${{ matrix.context }}
 
+      - name: Save Image to Tarball
+        run: |
+          docker save "${MATRIX_IMAGE}" -o image.tar
+        env:
+          MATRIX_IMAGE: ${{ matrix.image }}
+
+      - name: Upload Image Artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: image-tar-${{ matrix.name }}
+          path: image.tar
+          retention-days: 1
+
+  test:
+    permissions:
+      actions: read
+      contents: read
+    needs: [prepare-matrix, build]
+    if: ${{ fromJson(needs.prepare-matrix.outputs.count) > 0 }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.prepare-matrix.outputs.matrix) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
       - name: Detect container tests
         id: detect-tests
         run: |
@@ -235,21 +265,30 @@ jobs:
             exit 0
           fi
 
-          mapfile -d '' test_files < <(
-            find "$test_root" -type f -name '*.bats' -print0
-          )
+          first_test="$(find "$test_root" -type f -name '*.bats' -print -quit)"
 
-          if [ "${#test_files[@]}" -eq 0 ]; then
+          if [ -z "$first_test" ]; then
             echo "::notice title=No container tests::No Bats tests are present for ${MATRIX_NAME}; continuing."
             echo "present=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          echo "Found ${#test_files[@]} Bats test file(s) for ${MATRIX_NAME}."
+          echo "Bats tests are present for ${MATRIX_NAME}."
           echo "present=true" >> "$GITHUB_OUTPUT"
         env:
           MATRIX_CONTEXT: ${{ matrix.context }}
           MATRIX_NAME: ${{ matrix.name }}
+
+      - name: Download Image Artifact
+        if: ${{ steps.detect-tests.outputs.present == 'true' }}
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: image-tar-${{ matrix.name }}
+
+      - name: Load Image to Docker Daemon
+        if: ${{ steps.detect-tests.outputs.present == 'true' }}
+        run: |
+          docker load -i image.tar
 
       - name: Setup Bats and Bats libraries
         if: ${{ steps.detect-tests.outputs.present == 'true' }}
@@ -265,19 +304,6 @@ jobs:
           IMAGE: ${{ matrix.image }}
           MATRIX_CONTEXT: ${{ matrix.context }}
         run: bats --recursive "${MATRIX_CONTEXT}/tests"
-
-      - name: Save Image to Tarball
-        run: |
-          docker save "${MATRIX_IMAGE}" -o image.tar
-        env:
-          MATRIX_IMAGE: ${{ matrix.image }}
-
-      - name: Upload Image Artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: image-tar-${{ matrix.name }}
-          path: image.tar
-          retention-days: 1
 
   trivy-scan:
     permissions:
