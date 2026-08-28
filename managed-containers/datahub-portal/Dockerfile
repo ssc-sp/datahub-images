@@ -8,7 +8,7 @@ ARG SOURCE_SHA="3bd66d8c4a4ac1b87c661d33055eb7036d12326d"
 
 ARG BUILD_CONFIGURATION="Release"
 
-FROM artifacts-artefacts.devops.cloud-nuage.canada.ca/docker-chainguard-remote/ssc-spc.gc.ca/dotnet-sdk:v10-dev AS build
+FROM artifacts-artefacts.devops.cloud-nuage.canada.ca/docker-chainguard-remote/ssc-spc.gc.ca/dotnet-sdk:v10-dev@sha256:b38c4d29b8ec2d3e4096fc2d9cf8e9c58bb7ce8a3a5c511fe4fd920d6f9bcaa6 AS build
 
 ARG GOC_ROOT_A_FINGERPRINT \
     GOC_ROOT_A_URL \
@@ -63,7 +63,7 @@ RUN dotnet publish "Portal/src/Datahub.Portal/Datahub.Portal.csproj" \
         --configuration "${BUILD_CONFIGURATION}" \
         --output /app/publish
 
-FROM artifacts-artefacts.devops.cloud-nuage.canada.ca/docker-chainguard-remote/ssc-spc.gc.ca/aspnet-runtime:v10 AS final
+FROM artifacts-artefacts.devops.cloud-nuage.canada.ca/docker-chainguard-remote/ssc-spc.gc.ca/aspnet-runtime:v10@sha256:4e594a6a1ef1ff78123964378305ddc9df3e67560316a1e911fbdfc3bdfd7a22 AS final
 
 ARG SOURCE_REPOSITORY \
     SOURCE_REF \
