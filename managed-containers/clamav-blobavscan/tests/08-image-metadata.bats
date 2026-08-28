@@ -32,7 +32,7 @@ setup() {
   echo "${output}"
 
   [ "${status}" -eq 0 ]
-  [ "${output}" = "/clamav-blobavscan" ]
+  [ "${output}" = "/app" ]
 }
 
 @test "08.03 image uses the expected startup command" {
@@ -44,7 +44,7 @@ setup() {
 
   [ "${status}" -eq 0 ]
   [[ "${output}" == *'"/bin/bash"'* ]]
-  [[ "${output}" == *'"/clamav-blobavscan/entrypoint.sh"'* ]]
+  [[ "${output}" == *'"/app/entrypoint.sh"'* ]]
 }
 
 @test "08.04 image platform is linux amd64" {
