@@ -15,8 +15,7 @@ setup() {
 	[ "${status}" -eq 0 ]
 
 	case "${output}" in
-	nonroot | 65532 | 65532:65532)
-		;;
+	nonroot | 65532 | 65532:65532) ;;
 	*)
 		echo "Expected nonroot or UID 65532, got: ${output}" >&2
 		return 1
