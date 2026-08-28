@@ -281,7 +281,7 @@ jobs:
 
       - name: Download Image Artifact
         if: ${{ steps.detect-tests.outputs.present == 'true' }}
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: image-tar-${{ matrix.name }}
 
@@ -324,7 +324,7 @@ jobs:
           persist-credentials: false
 
       - name: Download Image Artifact
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: image-tar-${{ matrix.name }}
 
@@ -385,7 +385,7 @@ jobs:
 
       - name: Upload Trivy SARIF to GitHub
         if: ${{ steps.validate-sarif.outputs.upload == 'true' }}
-        uses: github/codeql-action/upload-sarif@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4
+        uses: github/codeql-action/upload-sarif@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9
         with:
           sarif_file: trivy-report.sarif
           category: trivy-${{ matrix.name }}
@@ -437,7 +437,7 @@ jobs:
           persist-credentials: false
 
       - name: Download Image Artifact
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: image-tar-${{ matrix.name }}ƒ
 
@@ -488,7 +488,7 @@ jobs:
 
       - name: Upload SARIF to GitHub
         if: ${{ steps.validate-sarif.outputs.upload == 'true' }}
-        uses: github/codeql-action/upload-sarif@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4
+        uses: github/codeql-action/upload-sarif@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9
         with:
           sarif_file: xray-report.sarif
           category: jfrog-xray-${{ matrix.name }}
