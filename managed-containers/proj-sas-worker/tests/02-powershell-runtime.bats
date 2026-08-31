@@ -16,19 +16,25 @@ run_in_container() {
 }
 
 @test "02.01 PowerShell 7.5 or newer is installed" {
-	run run_in_container '
-        pwsh -NoLogo -NoProfile -NonInteractive -Command '"'"'
-            $minimum = [version]"7.5"
-            $actual = $PSVersionTable.PSVersion
+	container_script="$(
+		cat <<'SCRIPT'
+set -euo pipefail
 
-            Write-Host "PowerShell version: $actual"
+pwsh -NoLogo -NoProfile -NonInteractive -Command - <<'POWERSHELL'
+$minimum = [version]"7.5"
+$actual = $PSVersionTable.PSVersion
 
-            if ($actual -lt $minimum) {
-                Write-Error "PowerShell $minimum or newer is required"
-                exit 1
-            }
-        '"'"'
-    '
+Write-Host "PowerShell version: $actual"
+
+if ($actual -lt $minimum) {
+    Write-Error "PowerShell $minimum or newer is required"
+    exit 1
+}
+POWERSHELL
+SCRIPT
+	)"
+
+	run run_in_container "${container_script}"
 
 	echo "${output}"
 
@@ -37,8 +43,17 @@ run_in_container() {
 }
 
 @test "02.02 PowerShell can execute a non-interactive command" {
-	run run_in_container \
-		'pwsh -NoLogo -NoProfile -NonInteractive -Command '\''Write-Output "PowerShell runtime test passed"'\'''
+	container_script="$(
+		cat <<'SCRIPT'
+set -euo pipefail
+
+pwsh -NoLogo -NoProfile -NonInteractive -Command - <<'POWERSHELL'
+Write-Output "PowerShell runtime test passed"
+POWERSHELL
+SCRIPT
+	)"
+
+	run run_in_container "${container_script}"
 
 	echo "${output}"
 

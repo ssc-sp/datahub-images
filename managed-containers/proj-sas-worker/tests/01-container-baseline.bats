@@ -16,12 +16,17 @@ run_in_container() {
 }
 
 @test "01.01 container runs as runner and not root" {
-	run run_in_container '
-    set -euo pipefail
-    printf "user=%s uid=%s\n" "$(id -un)" "$(id -u)"
-    test "$(id -un)" = "runner"
-    test "$(id -u)" -ne 0
-  '
+	container_script="$(
+		cat <<'SCRIPT'
+set -euo pipefail
+
+printf "user=%s uid=%s\n" "$(id -un)" "$(id -u)"
+test "$(id -un)" = "runner"
+test "$(id -u)" -ne 0
+SCRIPT
+	)"
+
+	run run_in_container "${container_script}"
 
 	echo "${output}"
 
@@ -30,23 +35,28 @@ run_in_container() {
 }
 
 @test "01.02 required command-line tools are installed" {
-	run run_in_container '
-    set -euo pipefail
+	container_script="$(
+		cat <<'SCRIPT'
+set -euo pipefail
 
-    for command in \
-      pwsh \
-      curl \
-      jq \
-      openssl \
-      tar \
-      gpg \
-      lsb_release
-    do
-      command -v "${command}"
-    done
-  '
+for command in \
+	pwsh \
+	curl \
+	jq \
+	openssl \
+	tar \
+	gpg \
+	lsb_release
+do
+	command -v "${command}"
+done
+SCRIPT
+	)"
+
+	run run_in_container "${container_script}"
 
 	echo "${output}"
+
 	[ "${status}" -eq 0 ]
 }
 
