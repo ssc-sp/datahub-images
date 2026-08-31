@@ -16,25 +16,34 @@ run_in_container() {
 }
 
 @test "04.01 sas.ps1 contains valid PowerShell syntax" {
-	run run_in_container '
-    pwsh -NoLogo -NoProfile -NonInteractive -Command '\''
-      $tokens = $null
-      $errors = $null
+	container_script="$(
+		cat <<'SCRIPT'
+set -euo pipefail
 
-      [System.Management.Automation.Language.Parser]::ParseFile(
-        "/app/sas.ps1",
-        [ref]$tokens,
-        [ref]$errors
-      ) | Out-Null
+pwsh -NoLogo -NoProfile -NonInteractive -Command - <<'POWERSHELL'
+$tokens = $null
+$errors = $null
 
-      if ($errors.Count -gt 0) {
-        $errors | ForEach-Object { Write-Error $_.Message }
-        exit 1
-      }
+[System.Management.Automation.Language.Parser]::ParseFile(
+    "/app/sas.ps1",
+    [ref]$tokens,
+    [ref]$errors
+) | Out-Null
 
-      Write-Output "PowerShell syntax validation passed"
-    '\''
-  '
+if ($errors.Count -gt 0) {
+    $errors | ForEach-Object {
+        Write-Error $_.Message
+    }
+
+    exit 1
+}
+
+Write-Output "PowerShell syntax validation passed"
+POWERSHELL
+SCRIPT
+	)"
+
+	run run_in_container "${container_script}"
 
 	echo "${output}"
 

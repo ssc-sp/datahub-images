@@ -1,6 +1,6 @@
 # proj-sas-worker
 
-A minimal, pinned Ubuntu-based container that **rotates an Azure Storage Container SAS** secret stored in **Azure Key Vault** when it’s close to expiry. Intended to run non-interactively (cron/ACI/Kubernetes CronJob) using a **Managed Identity**.
+A minimal, pinned Ubuntu-based container that **rotates an Azure Storage Container SAS** secret stored in **Azure Key Vault** when it’s close to expiry. Intended to run non-interactively (cron/Kubernetes CronJob) using a **Managed Identity**.
 
 ---
 
