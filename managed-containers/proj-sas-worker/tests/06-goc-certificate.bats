@@ -1,4 +1,5 @@
 #!/usr/bin/env bats
+
 # shellcheck disable=SC2016
 
 setup() {
@@ -25,10 +26,12 @@ pwsh -NoLogo -NoProfile -NonInteractive -Command - <<'POWERSHELL'
 $ErrorActionPreference = "Stop"
 
 $certificatePath = "/usr/local/share/ca-certificates/GoC-GdC-Root-A.crt"
+
 $expectedFingerprint = (
     "FE:E0:9E:77:43:BF:D4:3E:D7:D4:D3:ED:50:6C:C7:9D:" +
     "2D:90:70:FF:A9:29:91:16:87:D4:27:33:70:BE:A3:06"
 )
+
 $expectedCompact = $expectedFingerprint.Replace(":", "")
 
 if (-not (Test-Path -LiteralPath $certificatePath -PathType Leaf)) {
@@ -38,9 +41,11 @@ if (-not (Test-Path -LiteralPath $certificatePath -PathType Leaf)) {
 $certificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new(
     $certificatePath
 )
+
 $actualCompact = $certificate.GetCertHashString(
     [System.Security.Cryptography.HashAlgorithmName]::SHA256
 )
+
 $actualFingerprint = [regex]::Replace(
     $actualCompact,
     "(.{2})(?!$)",
@@ -63,7 +68,8 @@ SCRIPT
 	)"
 
 	run run_in_container "${container_script}"
-	print_test_output
+
+	echo "${output}"
 
 	[ "${status}" -eq 0 ]
 	[[ "${output}" == *"Government of Canada root certificate fingerprint is correct."* ]]
@@ -101,7 +107,8 @@ SCRIPT
 	)"
 
 	run run_in_container "${container_script}"
-	print_test_output
+
+	echo "${output}"
 
 	[ "${status}" -eq 0 ]
 	[[ "${output}" == *"Government of Canada root certificate is present in Ubuntu's CA bundle."* ]]
