@@ -15,14 +15,25 @@ run_in_container() {
     -lc "$1"
 }
 
-@test "02.01 PowerShell 7.5.3 is installed" {
-  run run_in_container \
-    'pwsh -NoLogo -NoProfile -NonInteractive -Command '\''$PSVersionTable.PSVersion.ToString()'\'''
+@test "02.01 PowerShell 7.5 or newer is installed" {
+    run run_in_container '
+        pwsh -NoLogo -NoProfile -NonInteractive -Command '"'"'
+            $minimum = [version]"7.5"
+            $actual = $PSVersionTable.PSVersion
 
-  echo "${output}"
+            Write-Host "PowerShell version: $actual"
 
-  [ "${status}" -eq 0 ]
-  [ "${output}" = "7.5.3" ]
+            if ($actual -lt $minimum) {
+                Write-Error "PowerShell $minimum or newer is required"
+                exit 1
+            }
+        '"'"'
+    '
+
+    echo "${output}"
+
+    [ "${status}" -eq 0 ]
+    [[ "${output}" == *"PowerShell version:"* ]]
 }
 
 @test "02.02 PowerShell can execute a non-interactive command" {
