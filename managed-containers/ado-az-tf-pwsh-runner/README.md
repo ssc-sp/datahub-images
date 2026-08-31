@@ -9,7 +9,6 @@ This Docker image provides a ready‑to‑use, self‑hosted Azure DevOps (ADO) 
 - **Azure CLI** to interact with Azure resources directly from your pipelines
 - **Terraform CLI** to interact and deploy terraform resources directly from your pipelines
 - Common utilities out of the box:
-
   - `openssl`, `ca-certificates`
   - `jq`, `curl`, `wget`
   - `gpg`, `lsb-release`, `git`, `debsums`
@@ -46,7 +45,7 @@ This Docker image provides a ready‑to‑use, self‑hosted Azure DevOps (ADO) 
 ## Metadata & Labels
 
 - **Source:** `https://github.com/fsdh-pfds/datahub-images`
-- **Description:** ADO Linux (ubuntu) Self‑Hosted Runner image with PowerShell and the Azure CLI
+- **Description:** ADO Linux (Ubuntu) Self‑Hosted Runner image with PowerShell and the Azure CLI
 
 These labels conform to the [OCI Image Spec](https://github.com/opencontainers/image-spec):
 
