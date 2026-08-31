@@ -45,7 +45,7 @@ RUN apt-get update \
  && update-ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 
-# Install snapshotted baseline packages
+# Install baseline packages
 RUN apt-get update && \
     xargs -a /tmp/base_packages.list apt-get install -y --no-install-recommends && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
@@ -56,7 +56,7 @@ RUN curl -sSL https://packages.microsoft.com/keys/microsoft.asc -o /tmp/microsof
     echo "deb [signed-by=/usr/share/keyrings/microsoft-archive-keyring.gpg] https://packages.microsoft.com/ubuntu/24.04/prod noble main" > /etc/apt/sources.list.d/microsoft-prod.list && \
     echo "deb [signed-by=/usr/share/keyrings/microsoft-archive-keyring.gpg] https://packages.microsoft.com/repos/azure-cli/ noble main" > /etc/apt/sources.list.d/azure-cli.list
   
-# Install snapshotted addon packages
+# Install addon packages
 RUN apt-get update && \
     xargs -a /tmp/addon_packages.list apt-get install -y --no-install-recommends && \
     apt-get clean && rm -rf /var/lib/apt/lists/*

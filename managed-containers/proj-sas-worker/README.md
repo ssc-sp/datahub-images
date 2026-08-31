@@ -32,7 +32,7 @@ Logic lives in `app/sas.ps1` and is the container’s default command.
 
 ## Image design highlights
 
-- Ubuntu 24.04 pinned by digest + **apt snapshot** via `SNAPSHOT_ID`.
+- Ubuntu 26.04 pinned by digest + **apt snapshot** via `SNAPSHOT_ID`.
 - Package versions pinned in `base_packages.list` / `addon_packages.list`.
 - PowerShell + Az modules at fixed versions.
 - Runs as **non‑root** user `runner`.
