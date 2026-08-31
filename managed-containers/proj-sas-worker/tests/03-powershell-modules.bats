@@ -1,22 +1,22 @@
 #!/usr/bin/env bats
 
 setup() {
-  IMAGE="${IMAGE:-proj-sas-worker:latest}"
-  PLATFORM="${PLATFORM:-linux/amd64}"
-  CONTAINER_RUNTIME="${CONTAINER_RUNTIME:-docker}"
+	IMAGE="${IMAGE:-proj-sas-worker:latest}"
+	PLATFORM="${PLATFORM:-linux/amd64}"
+	CONTAINER_RUNTIME="${CONTAINER_RUNTIME:-docker}"
 }
 
 run_in_container() {
-  "${CONTAINER_RUNTIME}" run \
-    --rm \
-    --platform "${PLATFORM}" \
-    --entrypoint /bin/bash \
-    "${IMAGE}" \
-    -lc "$1"
+	"${CONTAINER_RUNTIME}" run \
+		--rm \
+		--platform "${PLATFORM}" \
+		--entrypoint /bin/bash \
+		"${IMAGE}" \
+		-lc "$1"
 }
 
 @test "03.01 required PowerShell modules are installed at pinned versions" {
-  run run_in_container '
+	run run_in_container '
     pwsh -NoLogo -NoProfile -NonInteractive -Command '\''
       $ErrorActionPreference = "Stop"
 
@@ -43,17 +43,17 @@ run_in_container() {
     '\''
   '
 
-  echo "${output}"
+	echo "${output}"
 
-  [ "${status}" -eq 0 ]
-  [[ "${output}" == *"PASS: Az 14.4.0"* ]]
-  [[ "${output}" == *"PASS: SqlServer 22.3.0"* ]]
-  [[ "${output}" == *"PASS: Az.Accounts 5.3.0"* ]]
-  [[ "${output}" == *"PASS: Az.ServiceBus 4.1.1"* ]]
+	[ "${status}" -eq 0 ]
+	[[ "${output}" == *"PASS: Az 14.4.0"* ]]
+	[[ "${output}" == *"PASS: SqlServer 22.3.0"* ]]
+	[[ "${output}" == *"PASS: Az.Accounts 5.3.0"* ]]
+	[[ "${output}" == *"PASS: Az.ServiceBus 4.1.1"* ]]
 }
 
 @test "03.02 commands required by sas.ps1 are available" {
-  run run_in_container '
+	run run_in_container '
     pwsh -NoLogo -NoProfile -NonInteractive -Command '\''
       $ErrorActionPreference = "Stop"
 
@@ -77,13 +77,13 @@ run_in_container() {
     '\''
   '
 
-  echo "${output}"
+	echo "${output}"
 
-  [ "${status}" -eq 0 ]
-  [[ "${output}" == *"PASS: Set-AzContext"* ]]
-  [[ "${output}" == *"PASS: Connect-AzAccount"* ]]
-  [[ "${output}" == *"PASS: Get-AzStorageAccount"* ]]
-  [[ "${output}" == *"PASS: New-AzStorageContainerSASToken"* ]]
-  [[ "${output}" == *"PASS: Get-AzKeyVaultSecret"* ]]
-  [[ "${output}" == *"PASS: Set-AzKeyVaultSecret"* ]]
+	[ "${status}" -eq 0 ]
+	[[ "${output}" == *"PASS: Set-AzContext"* ]]
+	[[ "${output}" == *"PASS: Connect-AzAccount"* ]]
+	[[ "${output}" == *"PASS: Get-AzStorageAccount"* ]]
+	[[ "${output}" == *"PASS: New-AzStorageContainerSASToken"* ]]
+	[[ "${output}" == *"PASS: Get-AzKeyVaultSecret"* ]]
+	[[ "${output}" == *"PASS: Set-AzKeyVaultSecret"* ]]
 }
