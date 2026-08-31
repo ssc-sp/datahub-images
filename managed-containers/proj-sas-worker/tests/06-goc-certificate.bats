@@ -1,13 +1,22 @@
 #!/usr/bin/env bats
 # shellcheck disable=SC2016
 
-load test_helper
-
 setup() {
-	setup_container_test
+	IMAGE="${IMAGE:-proj-sas-worker:latest}"
+	PLATFORM="${PLATFORM:-linux/amd64}"
+	CONTAINER_RUNTIME="${CONTAINER_RUNTIME:-docker}"
 }
 
-@test "05.01 Government of Canada root certificate fingerprint is correct" {
+run_in_container() {
+	"${CONTAINER_RUNTIME}" run \
+		--rm \
+		--platform "${PLATFORM}" \
+		--entrypoint /bin/bash \
+		"${IMAGE}" \
+		-lc "$1"
+}
+
+@test "06.01 Government of Canada root certificate fingerprint is correct" {
 	container_script="$(
 		cat <<'SCRIPT'
 set -euo pipefail
@@ -60,7 +69,7 @@ SCRIPT
 	[[ "${output}" == *"Government of Canada root certificate fingerprint is correct."* ]]
 }
 
-@test "05.02 Government of Canada root certificate is in Ubuntu CA bundle" {
+@test "06.02 Government of Canada root certificate is in Ubuntu CA bundle" {
 	container_script="$(
 		cat <<'SCRIPT'
 set -euo pipefail
