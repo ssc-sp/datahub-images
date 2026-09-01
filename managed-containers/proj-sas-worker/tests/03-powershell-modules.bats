@@ -20,31 +20,52 @@ run_in_container() {
 		cat <<'SCRIPT'
 set -euo pipefail
 
-pwsh -NoLogo -NoProfile -NonInteractive -Command - <<'POWERSHELL'
+script_path="$(mktemp --suffix=.ps1)"
+trap 'rm -f "${script_path}"' EXIT
+
+cat >"${script_path}" <<'POWERSHELL'
 $ErrorActionPreference = "Stop"
 
 $expected = @{
-    "Az"            = "14.4.0"
-    "SqlServer"     = "22.3.0"
-    "Az.Accounts"   = "5.3.0"
-    "Az.ServiceBus" = "4.1.1"
+    "Az"            = [version]"14.4.0"
+    "SqlServer"     = [version]"22.3.0"
+    "Az.Accounts"   = [version]"5.3.0"
+    "Az.ServiceBus" = [version]"4.1.1"
 }
 
 foreach ($name in $expected.Keys) {
-    $version = $expected[$name]
+    $expectedVersion = $expected[$name]
 
     $module = Get-Module -ListAvailable -Name $name |
-        Where-Object { $_.Version -eq [version]$version } |
+        Where-Object Version -EQ $expectedVersion |
         Select-Object -First 1
 
     if (-not $module) {
-        Write-Error "$name $version is not installed"
-        exit 1
+        $availableVersions = @(
+            Get-Module -ListAvailable -Name $name |
+                Select-Object -ExpandProperty Version -Unique
+        )
+
+        if ($availableVersions.Count -eq 0) {
+            throw "$name is not installed"
+        }
+
+        throw (
+            "$name $expectedVersion is not installed. " +
+            "Available versions: $($availableVersions -join ', ')"
+        )
     }
 
-    Write-Output "PASS: $name $version"
+    Write-Output "PASS: $name $($module.Version)"
+    Write-Output "PATH: $($module.Path)"
 }
 POWERSHELL
+
+pwsh \
+	-NoLogo \
+	-NoProfile \
+	-NonInteractive \
+	-File "${script_path}"
 SCRIPT
 	)"
 
@@ -64,27 +85,38 @@ SCRIPT
 		cat <<'SCRIPT'
 set -euo pipefail
 
-pwsh -NoLogo -NoProfile -NonInteractive -Command - <<'POWERSHELL'
+script_path="$(mktemp --suffix=.ps1)"
+trap 'rm -f "${script_path}"' EXIT
+
+cat >"${script_path}" <<'POWERSHELL'
 $ErrorActionPreference = "Stop"
 
 $commands = @(
-    "Set-AzContext",
-    "Connect-AzAccount",
-    "Get-AzStorageAccount",
-    "New-AzStorageContainerSASToken",
-    "Get-AzKeyVaultSecret",
+    "Set-AzContext"
+    "Connect-AzAccount"
+    "Get-AzStorageAccount"
+    "New-AzStorageContainerSASToken"
+    "Get-AzKeyVaultSecret"
     "Set-AzKeyVaultSecret"
 )
 
-foreach ($command in $commands) {
-    if (-not (Get-Command $command -ErrorAction SilentlyContinue)) {
-        Write-Error "Missing required command: $command"
-        exit 1
+foreach ($commandName in $commands) {
+    $command = Get-Command $commandName -ErrorAction SilentlyContinue
+
+    if (-not $command) {
+        throw "Missing required command: $commandName"
     }
 
-    Write-Output "PASS: $command"
+    Write-Output "PASS: $commandName"
+    Write-Output "SOURCE: $($command.Source)"
 }
 POWERSHELL
+
+pwsh \
+	-NoLogo \
+	-NoProfile \
+	-NonInteractive \
+	-File "${script_path}"
 SCRIPT
 	)"
 
