@@ -84,9 +84,9 @@ try {
   Write-Output "Completed: New expiry $new_expiry"
 }
 catch {
-  Write-Host Error rotating SAS for project $projCode.ToUpper() !!!
-  Write-Host "Exception: $($_.Exception)"
-  Write-Host "Error Message: $($_.Exception.Message)"                    
+    Write-Host "Error rotating SAS for project $($projCode.ToUpper()) !!!"
+    Write-Host "Exception: $($_.Exception)"
+    Write-Host "Error Message: $($_.Exception.Message)"
+    exit 1
 }
-
 
