@@ -7,40 +7,47 @@ setup() {
 	setup_container_test
 }
 
-@test "04.01 sas.ps1 contains valid PowerShell syntax" {
+@test "04.01 expected PowerShell module versions are installed" {
 	container_script="$(
 		cat <<'SCRIPT'
 set -euo pipefail
 
 pwsh -NoLogo -NoProfile -NonInteractive -Command - <<'POWERSHELL'
-$tokens = $null
-$errors = $null
+$ErrorActionPreference = "Stop"
 
-[System.Management.Automation.Language.Parser]::ParseFile(
-    "/app/sas.ps1",
-    [ref]$tokens,
-    [ref]$errors
-) | Out-Null
-
-if ($errors.Count -gt 0) {
-    $errors | ForEach-Object {
-        Write-Error $_.Message
-    }
-
-    exit 1
+$expectedModules = @{
+    Az        = [version]"14.0.0"
+    SqlServer = [version]"22.3.0"
 }
 
-Write-Output "PowerShell syntax validation passed"
+foreach ($moduleName in $expectedModules.Keys) {
+    $expectedVersion = $expectedModules[$moduleName]
+
+    $module = Get-Module -ListAvailable -Name $moduleName |
+        Where-Object {
+            $_.Version -eq $expectedVersion
+        } |
+        Select-Object -First 1
+
+    if ($null -eq $module) {
+        throw (
+            "PowerShell module '{0}' version {1} is not installed." -f
+            $moduleName,
+            $expectedVersion
+        )
+    }
+}
 POWERSHELL
+
+printf '%s\n' "POWERSHELL_MODULE_VERSIONS_OK"
 SCRIPT
 	)"
 
 	run run_in_container "${container_script}"
-
-	echo "${output}"
+	print_test_output
 
 	[ "${status}" -eq 0 ]
-	[[ "${output}" == *"PowerShell syntax validation passed"* ]]
+	[[ "${output}" == *"POWERSHELL_MODULE_VERSIONS_OK"* ]]
 }
 
 @test "04.02 representative PowerShell modules can be imported" {
