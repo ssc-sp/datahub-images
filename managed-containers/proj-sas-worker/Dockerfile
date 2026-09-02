@@ -1,4 +1,27 @@
-FROM ubuntu:24.04@sha256:6015f66923d7afbc53558d7ccffd325d43b4e249f41a6e93eef074c9505d2233
+FROM ubuntu:26.04@sha256:3131b4cc82a783df6c9df078f86e01819a13594b865c2cad47bd1bca2b7063bb AS certificate-builder
+
+ARG GOC_ROOT_A_FINGERPRINT="FE:E0:9E:77:43:BF:D4:3E:D7:D4:D3:ED:50:6C:C7:9D:2D:90:70:FF:A9:29:91:16:87:D4:27:33:70:BE:A3:06"
+ARG GOC_ROOT_A_URL="https://raw.githubusercontent.com/gccloudone-aurora-collab/goc-root-cert-mirror/main/certs/GoC-GdC-Root-A.crt"
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+SHELL ["/bin/bash", "-e", "-o", "pipefail", "-c"]
+
+# hadolint ignore=DL3008
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates curl openssl \
+    && curl -fsSL --insecure "${GOC_ROOT_A_URL}" -o /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt \
+    && test "$(openssl x509 \
+        -in /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt \
+        -noout \
+        -sha256 \
+        -fingerprint \
+        | cut -d= -f2)" = "${GOC_ROOT_A_FINGERPRINT}" \
+    && update-ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+
+FROM ubuntu:26.04@sha256:2260313b31c8c011cd2eebe728008efac1b3982be73eb71348ea2648d2c0e09b
 LABEL org.opencontainers.image.description="Container Job to rotate Storage Account SAS tokens"
 LABEL org.opencontainers.image.source="https://github.com/fsdh-pfds/datahub-images"
 LABEL org.opencontainers.image.url="https://github.com/fsdh-pfds/datahub-images/blob/main/managed-containers/proj-sas-worker/README.md"
@@ -10,18 +33,19 @@ ENV PROJ_CD= PROJ_RG= PROJ_STORAGE_ACCT= PROJ_KV= PROJ_SUB= CLIENT_ID=
 COPY base_packages.list /tmp/base_packages.list
 COPY addon_packages.list /tmp/addon_packages.list
 
-# Install ca-certificates
+# Copy only the fingerprint-verified certificate.
+COPY --from=certificate-builder \
+    /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt \
+    /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt
+
+# Install ca-certificates and rebuild this stage's certificate store.
 # hadolint ignore=DL3008
 RUN apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates \
- && rm -rf /var/lib/apt/lists/* 
+ && update-ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
 
-# apt-get snapshot id
-ARG SNAPSHOT_ID=20250912T000000Z
-RUN echo "APT::Snapshot \"${SNAPSHOT_ID}\";" \
-     > /etc/apt/apt.conf.d/50snapshot
-
-# Install snapshotted baseline packages
+# Install baseline packages
 RUN apt-get update && \
     xargs -a /tmp/base_packages.list apt-get install -y --no-install-recommends && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
@@ -29,10 +53,10 @@ RUN apt-get update && \
 # Install addon repositories    
 RUN curl -sSL https://packages.microsoft.com/keys/microsoft.asc -o /tmp/microsoft.gpg && \
     gpg --dearmor < /tmp/microsoft.gpg > /usr/share/keyrings/microsoft-archive-keyring.gpg && \
-    echo "deb [signed-by=/usr/share/keyrings/microsoft-archive-keyring.gpg] https://packages.microsoft.com/ubuntu/$(lsb_release -rs)/prod $(lsb_release -cs) main" > /etc/apt/sources.list.d/microsoft-prod.list && \
-    echo "deb [signed-by=/usr/share/keyrings/microsoft-archive-keyring.gpg] https://packages.microsoft.com/repos/azure-cli/ $(lsb_release -cs) main" > /etc/apt/sources.list.d/azure-cli.list
+    echo "deb [signed-by=/usr/share/keyrings/microsoft-archive-keyring.gpg] https://packages.microsoft.com/ubuntu/24.04/prod noble main" > /etc/apt/sources.list.d/microsoft-prod.list && \
+    echo "deb [signed-by=/usr/share/keyrings/microsoft-archive-keyring.gpg] https://packages.microsoft.com/repos/azure-cli/ noble main" > /etc/apt/sources.list.d/azure-cli.list
   
-# Install snapshotted addon packages
+# Install addon packages
 RUN apt-get update && \
     xargs -a /tmp/addon_packages.list apt-get install -y --no-install-recommends && \
     apt-get clean && rm -rf /var/lib/apt/lists/*

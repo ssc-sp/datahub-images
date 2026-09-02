@@ -139,7 +139,6 @@ def process_message(message):
     if not blob_client.exists():
         print(f"FSDH - blob Not foud: {blob_name_in_container} at {blob_url}")
         return
-
     clamav_socket = pyclamd.ClamdUnixSocket()
 
     scan_start_time = datetime.now()
@@ -187,6 +186,7 @@ def process_message(message):
                 blob_client.delete_blob()
 
     blob_metadata = blob_client.get_blob_properties().metadata
+    # Read metadata so we can emit the original values in the result message.
     blob_metadata.update(more_blob_metadata)
     blob_client.set_blob_metadata(metadata=blob_metadata)
 
@@ -195,8 +195,9 @@ def process_message(message):
             {
                 "ScanStartTime": scan_start_time.isoformat(),
                 "ScanEndTime": scan_end_time.isoformat(),
-                "ScanError": json.dumps(scan_result) if scan_result else "",
+                "ScanError": ", ".join(scan_result) if scan_result else "",
                 "ScannedFile": blob_url,
+                "UpdatedBlobMetadata": dict(blob_metadata or {}),
             }
         )
     )
