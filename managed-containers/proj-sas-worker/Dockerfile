@@ -22,9 +22,12 @@ RUN apt-get update \
 
 
 FROM ubuntu:26.04@sha256:2260313b31c8c011cd2eebe728008efac1b3982be73eb71348ea2648d2c0e09b
-LABEL org.opencontainers.image.description="Container Job to rotate Storage Account SAS tokens"
-LABEL org.opencontainers.image.source="https://github.com/fsdh-pfds/datahub-images"
-LABEL org.opencontainers.image.url="https://github.com/fsdh-pfds/datahub-images/blob/main/managed-containers/proj-sas-worker/README.md"
+
+LABEL org.opencontainers.image.source="https://github.com/ssc-sp/datahub-images" \
+   org.opencontainers.image.url="https://github.com/ssc-sp/datahub-images/blob/main/managed-containers/proj-sas-worker/README.md" \
+   org.opencontainers.image.title="SAS Token Rotator" \
+   org.opencontainers.image.description="Container Job to rotate Storage Account SAS tokens" \
+   org.opencontainers.image.authors="SSC Science Program" 
 
 # Enable headless mode
 ENV DEBIAN_FRONTEND=noninteractive
