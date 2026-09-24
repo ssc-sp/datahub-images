@@ -1,10 +1,10 @@
-FROM artifacts-artefacts.devops.cloud-nuage.canada.ca/docker-chainguard-remote/ssc-spc.gc.ca/dotnet-sdk:v10-dev@sha256:26ec882073725aa93607bf6d59b903a5686d942ac8127d8ef2d81377782266a1 AS builder
+FROM artifacts-artefacts.devops.cloud-nuage.canada.ca/docker-chainguard-remote/ssc-spc.gc.ca/dotnet-sdk:v10.0-dev@sha256:1744a266a5f421984e0a1e515b1e204113213a1e8376dd98740343873f3efa95 AS builder
 
 ARG GOC_ROOT_A_FINGERPRINT="FE:E0:9E:77:43:BF:D4:3E:D7:D4:D3:ED:50:6C:C7:9D:2D:90:70:FF:A9:29:91:16:87:D4:27:33:70:BE:A3:06" \
     GOC_ROOT_A_URL="https://raw.githubusercontent.com/gccloudone-aurora-collab/goc-root-cert-mirror/main/certs/GoC-GdC-Root-A.crt" \
     SOURCE_REPOSITORY="https://github.com/ssc-sp/guest-inviter-service.git" \
     SOURCE_REF="main" \
-    SOURCE_SHA="7fc1b4889b880a7c36e16e587c7e6dd90884ad88" \
+    SOURCE_SHA="4eaa69e463a11b87c8ac532cc96ab13fd59e0d60" \
     BUILD_CONFIGURATION="Release"
 
 ARG CACHE_BUSTER=1
@@ -43,7 +43,7 @@ RUN dotnet restore "InviterService.csproj" \
         --output /app/publish \
         /p:UseAppHost=false
 
-FROM artifacts-artefacts.devops.cloud-nuage.canada.ca/docker-chainguard-remote/ssc-spc.gc.ca/aspnet-runtime:v10@sha256:07064feb3fb36cbdd100f177b0719a709af7015f19d9bd12fdc57701ab797b88 AS final
+FROM artifacts-artefacts.devops.cloud-nuage.canada.ca/docker-chainguard-remote/ssc-spc.gc.ca/aspnet-runtime:v10.0@sha256:52a1252d716ab94a8110d52cbe2d8c6ea8884d777e857946e8336c490cab6498 AS final
 
 LABEL org.opencontainers.image.source="https://github.com/ssc-sp/datahub-images" \
     org.opencontainers.image.url="https://github.com/ssc-sp/datahub-images/blob/main/managed-containers/guest-inviter-service/README.md" \
