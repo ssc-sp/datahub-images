@@ -1,4 +1,4 @@
-FROM curlimages/curl:latest@sha256:4026b29997dc7c823b51c164b71e2b51e0fd95cce4601f78202c513d97da2922 AS downloader
+FROM curlimages/curl:latest@sha256:58adaa4e8dca9c988bae2aba4ab3434a0bb2da16bbe3f92dec39ec7785166777 AS downloader
 
 ARG RUNNER_VERSION=2.327.1
 ARG RUNNER_CONTAINER_HOOKS_VERSION=0.7.0
@@ -29,7 +29,7 @@ RUN curl -fsSL -o docker-buildx \
     && chmod +x docker-buildx
 
 
-FROM ubuntu:24.04@sha256:a08e551cb33850e4740772b38217fc1796a66da2506d312abe51acda354ff061
+FROM ubuntu:24.04@sha256:a853f94d226358a79c740cfc7bce0c289748f3fe3488d921d038ccd752c61b60
 
 LABEL org.opencontainers.image.description="ADO Linux (ubuntu) Self‑Hosted Runner image with Terraform, PowerShell and the Azure CLI"
 LABEL org.opencontainers.image.source="https://github.com/fsdh-pfds/datahub-images"
