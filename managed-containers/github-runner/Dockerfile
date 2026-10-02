@@ -29,7 +29,7 @@ RUN curl -fsSL -o docker-buildx \
     && chmod +x docker-buildx
 
 
-FROM ubuntu:24.04@sha256:a08e551cb33850e4740772b38217fc1796a66da2506d312abe51acda354ff061
+FROM ubuntu:26.04@sha256:3595d7fc4286a33fad0fd853a4063e654287a9c3787437d7937c94ca3f7a804e
 
 LABEL org.opencontainers.image.description="ADO Linux (ubuntu) Self‑Hosted Runner image with Terraform, PowerShell and the Azure CLI"
 LABEL org.opencontainers.image.source="https://github.com/fsdh-pfds/datahub-images"
