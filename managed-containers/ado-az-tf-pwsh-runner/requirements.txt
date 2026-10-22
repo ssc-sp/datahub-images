@@ -1,0 +1,7 @@
+certifi==2026.10.19
+PyJWT==2.15.1
+cryptography==50.0.2
+pyOpenSSL==26.4.0
+msgpack==1.2.3
+setuptools==84.2.1
+urllib3==2.8.0
