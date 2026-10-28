@@ -4,7 +4,7 @@ ARG GOC_ROOT_A_URL="https://raw.githubusercontent.com/gccloudone-aurora-collab/g
 ARG SOURCE_REPOSITORY="https://github.com/ssc-sp/datahub-portal.git"
 ARG SOURCE_REF="develop"
 # renovate: datasource=git-refs depName=datahub-portal packageName=https://github.com/ssc-sp/datahub-portal.git currentValue=develop
-ARG SOURCE_SHA="3bd66d8c4a4ac1b87c661d33055eb7036d12326d"
+ARG SOURCE_SHA="6952b1320d4a2f0f532900871e66479d12588e83"
 
 ARG BUILD_CONFIGURATION="Release"
 
