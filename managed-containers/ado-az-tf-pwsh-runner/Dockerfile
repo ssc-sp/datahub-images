@@ -21,7 +21,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # Install sqlcmd
-RUN cd /tmp && wget https://github.com/microsoft/go-sqlcmd/releases/download/v1.10.0/sqlcmd-linux-amd64.tar.bz2 -O sqlcmd.bz2 \
+RUN wget https://github.com/microsoft/go-sqlcmd/releases/download/v1.10.0/sqlcmd-linux-amd64.tar.bz2 -O sqlcmd.bz2 \
     && tar -xvf sqlcmd.bz2 -C /usr/bin sqlcmd
 
 FROM ubuntu:26.04@sha256:c098726dd9b9733f3e885f8de0ef375206a311b0a317eadc40d347b1115fb944
