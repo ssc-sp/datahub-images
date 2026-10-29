@@ -9,16 +9,20 @@ SHELL ["/bin/bash", "-e", "-o", "pipefail", "-c"]
 
 # hadolint ignore=DL3008
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates curl openssl \
+    && apt-get install -y --no-install-recommends ca-certificates curl openssl wget bzip2 \
     && curl -fsSL --insecure "${GOC_ROOT_A_URL}" -o /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt \
     && test "$(openssl x509 \
-        -in /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt \
-        -noout \
-        -sha256 \
-        -fingerprint \
-        | cut -d= -f2)" = "${GOC_ROOT_A_FINGERPRINT}" \
+    -in /usr/local/share/ca-certificates/GoC-GdC-Root-A.crt \
+    -noout \
+    -sha256 \
+    -fingerprint \
+    | cut -d= -f2)" = "${GOC_ROOT_A_FINGERPRINT}" \
     && update-ca-certificates \
     && rm -rf /var/lib/apt/lists/*
+
+# Install sqlcmd
+RUN cd /tmp && wget https://github.com/microsoft/go-sqlcmd/releases/download/v1.10.0/sqlcmd-linux-amd64.tar.bz2 -O sqlcmd.bz2 \
+    && tar -xvf sqlcmd.bz2 -C /usr/bin sqlcmd
 
 FROM ubuntu:26.04@sha256:c098726dd9b9733f3e885f8de0ef375206a311b0a317eadc40d347b1115fb944
 
@@ -40,9 +44,9 @@ COPY --from=certificate-builder \
 # Install ca-certificates and rebuild this stage's certificate store.
 # hadolint ignore=DL3008
 RUN apt-get update \
- && apt-get install -y --no-install-recommends ca-certificates \
- && update-ca-certificates \
- && rm -rf /var/lib/apt/lists/*
+    && apt-get install -y --no-install-recommends ca-certificates wget \
+    && update-ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 # Install baseline packages
 RUN apt-get update && \
@@ -82,6 +86,10 @@ RUN /opt/az/bin/python3 -m pip install \
     --upgrade \
     -r /tmp/requirements.txt \
     && /opt/az/bin/python3 -m pip check
+
+COPY --from=certificate-builder /usr/bin/sqlcmd /usr/bin/sqlcmd
+RUN chmod +x /usr/bin/sqlcmd
+
 # END
 
 # Remove unused Pebble service manager inherited from Ubuntu 26.04.
