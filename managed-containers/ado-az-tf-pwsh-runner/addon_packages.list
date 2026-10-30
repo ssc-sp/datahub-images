@@ -1,3 +1,4 @@
 azure-cli:amd64
 powershell:amd64
 terraform:amd64
+mssql-tools18:amd64
