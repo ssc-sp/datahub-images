@@ -7,6 +7,10 @@ setup() {
 	setup_container_test
 }
 
+teardown() {
+	print_test_output
+}
+
 @test "03.01 Terraform is installed and starts successfully" {
 	run run_in_container '
     set -euo pipefail
@@ -14,7 +18,6 @@ setup() {
     terraform version
     terraform version -json
   '
-	print_test_output
 
 	[ "${status}" -eq 0 ]
 	[[ "${output}" == *"Terraform v"* ]]
@@ -27,7 +30,6 @@ setup() {
 
     az version --output json
   '
-	print_test_output
 
 	[ "${status}" -eq 0 ]
 	[[ "${output}" == *'"azure-cli"'* ]]
@@ -43,7 +45,6 @@ setup() {
       -NonInteractive \
       -Command '\''$PSVersionTable.PSVersion.ToString()'\''
   '
-	print_test_output
 
 	[ "${status}" -eq 0 ]
 	[[ "${output}" =~ ^[0-9]+\.[0-9]+ ]]
@@ -55,6 +56,7 @@ setup() {
 
     for package_name in \
       azure-cli \
+      mssql-tools18 \
       powershell \
       python3 \
       python3-pip \
@@ -72,13 +74,25 @@ setup() {
       test "${package_status}" = "install ok installed"
     done
   '
-	print_test_output
 
 	[ "${status}" -eq 0 ]
 	[[ "${output}" == *"azure-cli: install ok installed"* ]]
+	[[ "${output}" == *"mssql-tools18: install ok installed"* ]]
 	[[ "${output}" == *"powershell: install ok installed"* ]]
 	[[ "${output}" == *"python3: install ok installed"* ]]
 	[[ "${output}" == *"python3-pip: install ok installed"* ]]
 	[[ "${output}" == *"python3-venv: install ok installed"* ]]
 	[[ "${output}" == *"terraform: install ok installed"* ]]
+}
+
+@test "03.05 SQLCMD is installed and starts successfully" {
+	run run_in_container '
+    set -euo pipefail
+
+    command -v sqlcmd
+    sqlcmd -?
+  '
+
+	[ "${status}" -eq 0 ]
+	[[ "${output}" == *"SQL Server Command Line Tool"* ]]
 }
