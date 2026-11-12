@@ -74,7 +74,7 @@ try {
     $new_expiry = (get-date).addDays(91).toString("yyyy-MM-dd")
     $new_tags = @{ "start" = "$new_start"; "expiry" = "$new_expiry" } 
 
-    $new_sas = New-AzStorageContainerSASToken -Name $container_name -Permission rwd -StartTime $new_start -ExpiryTime $new_expiry -context $context
+    $new_sas = New-AzStorageContainerSASToken -Name $container_name -Permission rwdl -StartTime $new_start -ExpiryTime $new_expiry -context $context
     $new_sas_secret = ConvertTo-SecureString -String "$new_sas" -AsPlainText -Force
     Set-AzKeyVaultSecret -VaultName $key_vault_name -Name $sas_secret_name -SecretValue $new_sas_secret -Tags $new_tags
 
